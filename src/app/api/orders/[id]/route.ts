@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 export async function PATCH(
   req: Request,
@@ -7,7 +7,7 @@ export async function PATCH(
   const { id } = await params
   const { status } = await req.json()
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('orders')
     .update({ status })
     .eq('id', id)
