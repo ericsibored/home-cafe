@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import type { Order, OrderStatus } from '@/types'
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -42,7 +42,7 @@ export default function OrdersPage() {
         setLoading(false)
       })
 
-    const channel = supabase
+    const channel = getSupabase()
       .channel('orders-dashboard')
       .on(
         'postgres_changes',
@@ -59,7 +59,7 @@ export default function OrdersPage() {
       )
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { getSupabase().removeChannel(channel) }
   }, [])
 
   const updateStatus = async (id: string, status: OrderStatus) => {
