@@ -1,7 +1,10 @@
 import { supabase } from '@/lib/supabase'
 
-export async function PATCH(req: Request, ctx: RouteContext<'/api/orders/[id]'>) {
-  const { id } = await ctx.params
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   const { status } = await req.json()
 
   const { data, error } = await supabase
