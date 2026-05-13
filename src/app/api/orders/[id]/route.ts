@@ -1,4 +1,4 @@
-import { getSupabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase-server'
 
 export async function PATCH(
   req: Request,
