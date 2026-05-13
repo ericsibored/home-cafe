@@ -55,15 +55,15 @@ export default function MenuPage() {
         body: JSON.stringify({ customer_name: customerName.trim(), items: cartItems, total, note }),
       })
 
-      if (!res.ok) throw new Error('Failed to place order')
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error ?? 'Failed to place order')
 
-      const order = await res.json()
-      setPlacedOrder({ id: order.id, total, venmoNote })
+      setPlacedOrder({ id: body.id, total, venmoNote })
       setCart(new Map())
       setCustomerName('')
       setNote('')
-    } catch {
-      setError('Something went wrong. Please try again.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
       setLoading(false)
     }
