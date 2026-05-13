@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { QRCodeSVG } from 'qrcode.react'
 import { MENU, CATEGORIES } from '@/lib/menu'
 import type { OrderItem } from '@/types'
 
@@ -88,17 +89,18 @@ export default function MenuPage() {
             <p className="text-4xl font-bold text-amber-800">${amount}</p>
           </div>
 
-          <a
-            href={deepLink}
-            className="block w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-xl mb-3 transition-colors"
-          >
-            Pay with Venmo App
-          </a>
+          <div className="mb-5">
+            <p className="text-xs text-gray-400 mb-3">📱 On your phone — scan to open Venmo</p>
+            <div className="flex justify-center">
+              <QRCodeSVG value={deepLink} size={160} />
+            </div>
+          </div>
+
           <a
             href={webLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl mb-6 transition-colors"
+            className="block w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-xl mb-6 transition-colors"
           >
             Pay on Venmo.com
           </a>
