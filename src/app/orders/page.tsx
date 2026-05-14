@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
 import type { Order, OrderStatus } from '@/types'
@@ -79,14 +80,17 @@ export default function OrdersPage() {
 
   return (
     <main className="min-h-screen bg-[#f6e7d7]">
-      <header className="bg-[#8fafee] px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#1e3a5f]">Orders Dashboard</h1>
-          <p className="text-[#4a6fa8] text-xs">
+      <header className="bg-[#8fafee] px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <Image src="/logo.png" alt="Lazy Orchard Café" width={52} height={52} priority />
+          <div>
+            <p className="text-[#1e3a5f] text-sm font-bold">Orders Dashboard</p>
+            <p className="text-[#4a6fa8] text-xs">
             {activeCounts.pending > 0 && `${activeCounts.pending} awaiting payment · `}
             {activeCounts.paid > 0 && `${activeCounts.paid} to prepare`}
             {activeCounts.pending === 0 && activeCounts.paid === 0 && 'All clear'}
           </p>
+          </div>
         </div>
         <Link href="/" className="text-[#4a6fa8] hover:text-[#1e3a5f] text-sm underline underline-offset-2">
           ← Menu

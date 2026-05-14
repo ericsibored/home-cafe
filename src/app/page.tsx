@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
 import { MENU, CATEGORIES } from '@/lib/menu'
@@ -119,10 +120,10 @@ export default function MenuPage() {
 
   return (
     <main className="min-h-screen bg-[#f6e7d7]">
-      <header className="bg-[#8fafee] px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#1e3a5f]">Lazy Orchard Caf&#233;</h1>
-          <p className="text-[#4a6fa8] text-xs">Order &amp; Pay</p>
+      <header className="bg-[#8fafee] px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <Image src="/logo.png" alt="Lazy Orchard Café" width={52} height={52} priority />
+          <p className="text-[#4a6fa8] text-xs font-medium">Order &amp; Pay</p>
         </div>
         <Link href="/orders" className="text-[#4a6fa8] hover:text-[#1e3a5f] text-sm underline underline-offset-2">
           Staff →
