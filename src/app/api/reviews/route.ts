@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { reviewer_name, rating, comment } = await request.json()
+    const { reviewer_name, rating, comment, ticket_code, item_id } = await request.json()
 
     if (!reviewer_name?.trim()) {
       return Response.json({ error: 'Name is required' }, { status: 400 })
@@ -31,6 +31,8 @@ export async function POST(request: Request) {
         reviewer_name: reviewer_name.trim(),
         rating: Number(rating),
         comment: comment?.trim() || null,
+        ticket_code: ticket_code || null,
+        item_id: item_id || null,
       }])
       .select()
       .single()
