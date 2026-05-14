@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Home Café",
+  title: "Lazy Orchard Café",
   description: "Order & Pay",
 };
 
