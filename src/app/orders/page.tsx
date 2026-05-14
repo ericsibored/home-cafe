@@ -78,17 +78,17 @@ export default function OrdersPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <header className="bg-amber-900 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+    <main className="min-h-screen bg-[#f6e7d7]">
+      <header className="bg-[#8fafee] px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Orders Dashboard</h1>
-          <p className="text-amber-300 text-xs">
+          <h1 className="text-xl font-bold tracking-tight text-[#1e3a5f]">Orders Dashboard</h1>
+          <p className="text-[#4a6fa8] text-xs">
             {activeCounts.pending > 0 && `${activeCounts.pending} awaiting payment · `}
             {activeCounts.paid > 0 && `${activeCounts.paid} to prepare`}
             {activeCounts.pending === 0 && activeCounts.paid === 0 && 'All clear'}
           </p>
         </div>
-        <Link href="/" className="text-amber-300 hover:text-white text-sm underline underline-offset-2">
+        <Link href="/" className="text-[#4a6fa8] hover:text-[#1e3a5f] text-sm underline underline-offset-2">
           ← Menu
         </Link>
       </header>
@@ -100,7 +100,7 @@ export default function OrdersPage() {
             onClick={() => setFilter(f.value)}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
               filter === f.value
-                ? 'bg-amber-800 text-white'
+                ? 'bg-[#8fafee] text-[#1e3a5f]'
                 : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
             }`}
           >
@@ -150,13 +150,13 @@ export default function OrdersPage() {
             </ul>
 
             {order.note && (
-              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-3">
+              <p className="text-xs text-[#3a5f9e] bg-[#e8f0fd] rounded-lg px-3 py-2 mb-3">
                 📝 {order.note}
               </p>
             )}
 
             <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-              <span className="font-bold text-amber-900">${order.total.toFixed(2)}</span>
+              <span className="font-bold text-[#1e3a5f]">${order.total.toFixed(2)}</span>
               <div className="flex gap-2">
                 {order.status === 'pending' && (
                   <>

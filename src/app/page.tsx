@@ -79,15 +79,15 @@ export default function MenuPage() {
     const webLink = `https://venmo.com/${venmoUsername}?txn=pay&amount=${amount}&note=${encodedNote}`
 
     return (
-      <main className="min-h-screen bg-amber-50 flex items-center justify-center p-6">
+      <main className="min-h-screen bg-[#f6e7d7] flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-lg text-center">
           <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-amber-900 mb-1">Order placed!</h2>
+          <h2 className="text-2xl font-bold text-[#1e3a5f] mb-1">Order placed!</h2>
           <p className="text-gray-500 text-sm mb-6">Complete your payment to confirm.</p>
 
-          <div className="bg-amber-50 rounded-xl p-4 mb-6">
+          <div className="bg-[#f6e7d7] rounded-xl p-4 mb-6">
             <p className="text-xs text-gray-400 mb-1">Total due</p>
-            <p className="text-4xl font-bold text-amber-800">${amount}</p>
+            <p className="text-4xl font-bold text-[#1e3a5f]">${amount}</p>
           </div>
 
           <div className="mb-5">
@@ -118,13 +118,13 @@ export default function MenuPage() {
   }
 
   return (
-    <main className="min-h-screen bg-amber-50">
-      <header className="bg-amber-900 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+    <main className="min-h-screen bg-[#f6e7d7]">
+      <header className="bg-[#8fafee] px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Home Café</h1>
-          <p className="text-amber-300 text-xs">Order &amp; Pay</p>
+          <h1 className="text-xl font-bold tracking-tight text-[#1e3a5f]">Lazy Orchard Caf&#233;</h1>
+          <p className="text-[#4a6fa8] text-xs">Order &amp; Pay</p>
         </div>
-        <Link href="/orders" className="text-amber-300 hover:text-white text-sm underline underline-offset-2">
+        <Link href="/orders" className="text-[#4a6fa8] hover:text-[#1e3a5f] text-sm underline underline-offset-2">
           Staff →
         </Link>
       </header>
@@ -135,7 +135,7 @@ export default function MenuPage() {
       >
         {CATEGORIES.map(category => (
           <section key={category} className="mb-10">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3 px-1">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[#4a6fa8] mb-3 px-1">
               {category}
             </h2>
             <div className="space-y-2">
@@ -148,7 +148,7 @@ export default function MenuPage() {
                       <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
                       <p className="text-xs text-gray-400 truncate">{item.description}</p>
                     </div>
-                    <span className="text-amber-800 font-semibold text-sm flex-shrink-0">
+                    <span className="text-[#3a5f9e] font-semibold text-sm flex-shrink-0">
                       ${item.price.toFixed(2)}
                     </span>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -156,7 +156,7 @@ export default function MenuPage() {
                         <>
                           <button
                             onClick={() => updateQty(item.id, -1)}
-                            className="w-7 h-7 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-sm flex items-center justify-center transition-colors"
+                            className="w-7 h-7 rounded-full bg-[#d9e8fa] hover:bg-[#c5d8f6] text-[#1e3a5f] font-bold text-sm flex items-center justify-center transition-colors"
                           >
                             −
                           </button>
@@ -165,7 +165,7 @@ export default function MenuPage() {
                       )}
                       <button
                         onClick={() => updateQty(item.id, 1)}
-                        className="w-7 h-7 rounded-full bg-amber-800 hover:bg-amber-900 text-white font-bold text-sm flex items-center justify-center transition-colors"
+                        className="w-7 h-7 rounded-full bg-[#8fafee] hover:bg-[#7a9de6] text-[#1e3a5f] font-bold text-sm flex items-center justify-center transition-colors"
                       >
                         +
                       </button>
@@ -187,21 +187,21 @@ export default function MenuPage() {
                 placeholder="Your name *"
                 value={customerName}
                 onChange={e => setCustomerName(e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8fafee]"
               />
               <input
                 type="text"
                 placeholder="Note (optional)"
                 value={note}
                 onChange={e => setNote(e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8fafee]"
               />
             </div>
             {error && <p className="text-red-500 text-xs">{error}</p>}
             <button
               onClick={handleSubmit}
               disabled={!customerName.trim() || loading}
-              className="w-full bg-amber-800 hover:bg-amber-900 disabled:opacity-40 text-white font-semibold py-3 rounded-xl flex items-center justify-between px-5 transition-colors"
+              className="w-full bg-[#8fafee] hover:bg-[#7a9de6] disabled:opacity-40 text-[#1e3a5f] font-semibold py-3 rounded-xl flex items-center justify-between px-5 transition-colors"
             >
               <span>{loading ? 'Placing order…' : 'Place Order'}</span>
               <span>${total.toFixed(2)}</span>
