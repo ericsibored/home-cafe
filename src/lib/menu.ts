@@ -1,24 +1,16 @@
 import type { MenuItem } from '@/types'
 
 export const MENU: MenuItem[] = [
-  // Coffee
-  { id: 'espresso', name: 'Espresso', description: 'Double shot, rich and bold', price: 3.00, category: 'Coffee', emoji: '☕' },
-  { id: 'latte', name: 'Latte', description: 'Espresso with steamed milk', price: 5.00, category: 'Coffee', emoji: '☕' },
-  { id: 'cappuccino', name: 'Cappuccino', description: 'Espresso with silky foam', price: 4.50, category: 'Coffee', emoji: '☕' },
-  { id: 'americano', name: 'Americano', description: 'Espresso with hot water', price: 3.50, category: 'Coffee', emoji: '☕' },
-  { id: 'cold-brew', name: 'Cold Brew', description: '12-hour steep over ice', price: 5.50, category: 'Coffee', emoji: '🧊' },
-  // Specialty
-  { id: 'matcha', name: 'Matcha Latte', description: 'Ceremonial grade, oat milk', price: 5.50, category: 'Specialty', emoji: '🍵' },
-  { id: 'chai', name: 'Chai Latte', description: 'House spice blend', price: 5.00, category: 'Specialty', emoji: '🍵' },
-  { id: 'lavender-latte', name: 'Lavender Latte', description: 'House lavender syrup', price: 5.50, category: 'Specialty', emoji: '💜' },
-  // Food
-  { id: 'avocado-toast', name: 'Avocado Toast', description: 'Sourdough, avocado, everything seasoning', price: 9.00, category: 'Food', emoji: '🥑' },
-  { id: 'croissant', name: 'Butter Croissant', description: 'Freshly baked, flaky', price: 4.00, category: 'Food', emoji: '🥐' },
-  { id: 'banana-bread', name: 'Banana Bread', description: 'Walnut, brown butter glaze', price: 3.50, category: 'Food', emoji: '🍞' },
-  { id: 'granola-bowl', name: 'Granola Bowl', description: 'House granola, Greek yogurt, honey', price: 7.00, category: 'Food', emoji: '🥣' },
   // Drinks
-  { id: 'sparkling-water', name: 'Sparkling Water', description: 'Served with citrus', price: 2.00, category: 'Drinks', emoji: '💧' },
-  { id: 'fresh-oj', name: 'Fresh OJ', description: 'Freshly squeezed orange juice', price: 4.00, category: 'Drinks', emoji: '🍊' },
+  { id: 'banana-milk-coffee', name: 'Banana Milk Coffee Latte', description: 'Espresso, banana milk, caramel', price: 4.00, category: 'Drinks', emoji: '🍌' },
+  { id: 'hojicha-persimmon', name: 'Hojicha Persimmon Latte', description: 'Roasted hojicha, persimmon purée, oat milk', price: 4.00, category: 'Drinks', emoji: '🍂' },
+  { id: 'matcha-cherry-spritz', name: 'Matcha Cherry Spritz', description: 'Ceremonial matcha, cherry syrup, sparkling water', price: 4.00, category: 'Drinks', emoji: '🍒' },
+  { id: 'lychee-matcha', name: 'Lychee Matcha Latte', description: 'Ceremonial matcha, lychee, oat milk', price: 4.00, category: 'Drinks', emoji: '🌸' },
+  // Food
+  { id: 'scallion-pancake-croissant', name: 'Scallion Pancake Croissant', description: 'Flaky croissant layered with scallion pancake', price: 2.50, category: 'Food', emoji: '🥐' },
+  { id: 'jasmine-grape-cake', name: 'Jasmine Green Grape Cream Cake', description: 'Jasmine sponge, green grape, diplomat cream', price: 2.50, category: 'Food', emoji: '🍰' },
+  { id: 'strawberry-earl-grey-cookies', name: 'Strawberry & Earl Grey Cookies', description: 'Buttery shortbread, earl grey, strawberry jam', price: 2.50, category: 'Food', emoji: '🍓' },
+  { id: 'black-sesame-coconut-cookies', name: 'Black Sesame Coconut Cookies', description: 'Toasted black sesame, coconut flakes', price: 2.50, category: 'Food', emoji: '🍪' },
 ]
 
 export const CATEGORIES = [...new Set(MENU.map(item => item.category))]
