@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
@@ -15,7 +15,32 @@ interface PlacedOrder {
   venmoNote: string
 }
 
-// ── Star Rating ────────────────────────────────────────────────────────────────
+interface Review {
+  id: string
+  reviewer_name: string
+  rating: number
+  comment: string | null
+  created_at: string
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
+function StarDisplay({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg' | 'xl' }) {
+  const cls = size === 'xl' ? 'text-3xl' : size === 'lg' ? 'text-xl' : 'text-sm'
+  return (
+    <span className={cls}>
+      {[1, 2, 3, 4, 5].map(s => (
+        <span key={s} className={s <= rating ? 'text-[#8fafee]' : 'text-gray-200'}>★</span>
+      ))}
+    </span>
+  )
+}
+
+// ── Star Rating (interactive) ──────────────────────────────────────────────────
 
 function StarRating({
   rating,
@@ -40,6 +65,254 @@ function StarRating({
           </span>
         </button>
       ))}
+    </div>
+  )
+}
+
+// ── Review Modal ───────────────────────────────────────────────────────────────
+
+function ReviewModal({
+  reviews,
+  loading,
+  onClose,
+  onSubmit,
+}: {
+  reviews: Review[]
+  loading: boolean
+  onClose: () => void
+  onSubmit: (name: string, rating: number, comment: string) => Promise<void>
+}) {
+  const [showForm, setShowForm] = useState(false)
+  const [name, setName] = useState('')
+  const [rating, setRating] = useState(0)
+  const [comment, setComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const backdropRef = useRef<HTMLDivElement>(null)
+
+  // Close on backdrop click
+  const handleBackdrop = (e: React.MouseEvent) => {
+    if (e.target === backdropRef.current) onClose()
+  }
+
+  // Compute stats
+  const count = reviews.length
+  const avg = count > 0
+    ? reviews.reduce((s, r) => s + r.rating, 0) / count
+    : 0
+  const histogram = [5, 4, 3, 2, 1].map(star => ({
+    star,
+    count: reviews.filter(r => r.rating === star).length,
+  }))
+
+  const handleSubmit = async () => {
+    if (!name.trim()) { setSubmitError('Please enter your first name.'); return }
+    if (rating === 0) { setSubmitError('Please choose a star rating.'); return }
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      await onSubmit(name.trim(), rating, comment.trim())
+      setSubmitted(true)
+      setShowForm(false)
+      setName('')
+      setRating(0)
+      setComment('')
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'Something went wrong.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      ref={backdropRef}
+      onClick={handleBackdrop}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4"
+    >
+      <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh] shadow-2xl overflow-hidden">
+
+        {/* Drag handle (mobile) */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 flex-shrink-0 border-b border-gray-100">
+          <h2 className="text-base font-bold text-[#1e3a5f]">Reviews</h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1">
+
+          {/* Summary */}
+          <div className="px-5 py-5 flex gap-6 items-center border-b border-gray-100">
+            {/* Big average */}
+            <div className="text-center flex-shrink-0">
+              <p className="text-5xl font-black text-[#1e3a5f] leading-none">
+                {count > 0 ? avg.toFixed(1) : '—'}
+              </p>
+              <div className="mt-1">
+                <StarDisplay rating={Math.round(avg)} size="lg" />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">{count} {count === 1 ? 'review' : 'reviews'}</p>
+            </div>
+
+            {/* Histogram */}
+            <div className="flex-1 space-y-1">
+              {histogram.map(({ star, count: c }) => {
+                const pct = count > 0 ? Math.round((c / count) * 100) : 0
+                return (
+                  <div key={star} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-3 text-right">{star}</span>
+                    <span className="text-[#8fafee] text-xs leading-none">★</span>
+                    <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-[#8fafee] h-full rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400 w-4 text-right">{c}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Write a Review CTA / success */}
+          <div className="px-5 py-4 border-b border-gray-100">
+            {submitted && !showForm ? (
+              <div className="text-center py-2">
+                <p className="text-2xl mb-1">🎉</p>
+                <p className="text-sm font-semibold text-[#1e3a5f]">Thanks for your review!</p>
+                <button
+                  onClick={() => { setSubmitted(false); setShowForm(true) }}
+                  className="text-xs text-[#4a6fa8] underline mt-1"
+                >
+                  Leave another
+                </button>
+              </div>
+            ) : !showForm ? (
+              <button
+                onClick={() => setShowForm(true)}
+                className="w-full py-2.5 rounded-xl border-2 border-[#8fafee] text-[#1e3a5f] text-sm font-semibold hover:bg-[#8fafee]/10 transition-colors"
+              >
+                ✍️ Write a Review
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-[#1e3a5f]">Your Review</p>
+                {/* Name */}
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">First name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sarah"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8fafee]"
+                  />
+                </div>
+                {/* Star picker */}
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Rating *</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setRating(s)}
+                        className="text-3xl leading-none transition-transform active:scale-110"
+                      >
+                        <span className={s <= rating ? 'text-[#8fafee]' : 'text-gray-200'}>★</span>
+                      </button>
+                    ))}
+                    {rating > 0 && (
+                      <span className="self-center text-xs text-gray-400 ml-1">
+                        {['', 'Not for me', 'It\'s okay', 'Pretty good', 'Really good', 'Obsessed'][rating]}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Comment */}
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Comment <span className="text-gray-300">(optional)</span></label>
+                  <textarea
+                    placeholder="What did you love? Any standouts?"
+                    value={comment}
+                    onChange={e => setComment(e.target.value)}
+                    rows={3}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8fafee] resize-none"
+                  />
+                </div>
+                {submitError && <p className="text-red-500 text-xs">{submitError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowForm(false); setSubmitError('') }}
+                    className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="flex-1 py-2.5 rounded-xl bg-[#8fafee] hover:bg-[#7a9de6] disabled:opacity-40 text-[#1e3a5f] text-sm font-semibold transition-colors"
+                  >
+                    {submitting ? 'Submitting…' : 'Submit'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Review list */}
+          <div className="px-5 py-2">
+            {loading ? (
+              <div className="py-8 text-center">
+                <p className="text-gray-300 text-sm">Loading reviews…</p>
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-2xl mb-2">☕</p>
+                <p className="text-sm text-gray-400">No reviews yet — be the first!</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {reviews.map(review => (
+                  <div key={review.id} className="py-4">
+                    <div className="flex items-start gap-3">
+                      {/* Avatar */}
+                      <div className="w-9 h-9 rounded-full bg-[#d9e8fa] flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-bold text-[#4a6fa8]">
+                          {review.reviewer_name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{review.reviewer_name}</p>
+                          <p className="text-xs text-gray-400 flex-shrink-0">{formatDate(review.created_at)}</p>
+                        </div>
+                        <div className="mt-0.5">
+                          <StarDisplay rating={review.rating} size="sm" />
+                        </div>
+                        {review.comment && (
+                          <p className="mt-1.5 text-sm text-gray-600 leading-relaxed">{review.comment}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -172,6 +445,15 @@ export default function MenuPage() {
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null)
   const [error, setError] = useState('')
   const [ratings, setRatings] = useState<Record<string, number>>({})
+  const [expandedItem, setExpandedItem] = useState<string | null>(null)
+  const [drinkTemp, setDrinkTemp] = useState<Record<string, 'hot' | 'iced'>>({})
+  const getDrinkTemp = (item: { id: string; tempOptions?: ('hot' | 'iced')[] }) =>
+    drinkTemp[item.id] ?? (item.tempOptions?.[0] ?? 'hot')
+
+  // Reviews state
+  const [showReviews, setShowReviews] = useState(false)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
 
   useEffect(() => {
     try {
@@ -179,6 +461,31 @@ export default function MenuPage() {
       if (saved) setRatings(JSON.parse(saved))
     } catch {}
   }, [])
+
+  // Fetch reviews when modal opens
+  useEffect(() => {
+    if (!showReviews) return
+    setReviewsLoading(true)
+    fetch('/api/reviews')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setReviews(data)
+      })
+      .catch(() => {})
+      .finally(() => setReviewsLoading(false))
+  }, [showReviews])
+
+  const submitReview = async (name: string, rating: number, comment: string) => {
+    const res = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewer_name: name, rating, comment }),
+    })
+    const body = await res.json()
+    if (!res.ok) throw new Error(body.error ?? 'Failed to submit')
+    // Prepend new review optimistically
+    setReviews(prev => [body, ...prev])
+  }
 
   const rate = (itemId: string, stars: number) => {
     const next = { ...ratings, [itemId]: stars }
@@ -275,6 +582,11 @@ export default function MenuPage() {
     )
   }
 
+  // Derive review summary for the About section badge
+  const reviewAvg = reviews.length > 0
+    ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+    : null
+
   return (
     <main className="min-h-screen bg-[#f6e7d7]">
       {/* Header */}
@@ -297,6 +609,23 @@ export default function MenuPage() {
             We&apos;ve been experimenting with new flavors and techniques, and we&apos;d love for you to be our first official tasters.
             This is the first of hopefully many events to come — thanks for being here.
           </p>
+          {/* Reviews button */}
+          <button
+            onClick={() => setShowReviews(true)}
+            className="mt-3 flex items-center gap-2 text-sm text-[#1e3a5f] hover:text-[#4a6fa8] transition-colors group"
+          >
+            <span className="text-[#8fafee]">
+              {reviewAvg !== null
+                ? `${'★'.repeat(Math.round(reviewAvg))}${'☆'.repeat(5 - Math.round(reviewAvg))}`
+                : '★★★★★'}
+            </span>
+            <span className="font-semibold group-hover:underline">
+              {reviews.length > 0
+                ? `${reviewAvg!.toFixed(1)} · ${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`
+                : 'Write a Review'}
+            </span>
+            <span className="text-gray-400 text-xs">›</span>
+          </button>
         </div>
       </div>
 
@@ -336,18 +665,32 @@ export default function MenuPage() {
                 <div className="space-y-2">
                   {MENU.filter(item => item.category === category).map(item => {
                     const qty = cart.get(item.id) ?? 0
+                    const isExpanded = expandedItem === item.id
                     return (
-                      <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm">
+                      <div
+                        key={item.id}
+                        className="bg-white rounded-xl p-4 shadow-sm cursor-pointer select-none"
+                        onClick={() => setExpandedItem(isExpanded ? null : item.id)}
+                      >
                         <div className="flex items-center gap-3">
                           <span className="text-2xl w-8 text-center flex-shrink-0">{item.emoji}</span>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
                             <p className="text-xs text-gray-400 truncate">{item.description}</p>
                           </div>
-                          <span className="text-[#3a5f9e] font-semibold text-sm flex-shrink-0">
+                          <span className="text-[#3a5f9e] font-semibold text-sm flex-shrink-0 flex items-center gap-1">
                             ${item.price.toFixed(2)}
+                            <span
+                              className="text-[#8fafee] text-xs leading-none transition-transform duration-300"
+                              style={{ display: 'inline-block', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                            >
+                              ▾
+                            </span>
                           </span>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div
+                            className="flex items-center gap-2 flex-shrink-0"
+                            onClick={e => e.stopPropagation()}
+                          >
                             {qty > 0 && (
                               <>
                                 <button
@@ -367,13 +710,76 @@ export default function MenuPage() {
                             </button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-2 pl-11">
+                        <div
+                          className="flex items-center gap-2 mt-2 pl-11"
+                          onClick={e => e.stopPropagation()}
+                        >
                           <StarRating rating={ratings[item.id] ?? 0} onRate={r => rate(item.id, r)} />
                           {ratings[item.id] > 0 && (
                             <span className="text-xs text-gray-300">
                               {['', 'Not for me', 'It\'s okay', 'Pretty good', 'Really good', 'Obsessed'][ratings[item.id]]}
                             </span>
                           )}
+                        </div>
+                        {/* Expandable detail panel */}
+                        <div
+                          style={{
+                            maxHeight: isExpanded ? '260px' : '0px',
+                            overflow: 'hidden',
+                            transition: 'max-height 0.35s ease',
+                          }}
+                        >
+                          <div className="mt-3 pt-3 border-t border-gray-100 pl-11 pr-1 space-y-1.5">
+                            {/* Hot / Iced toggle — only for drinks with both options */}
+                            {item.tempOptions && item.tempOptions.length > 1 && (
+                              <div
+                                className="flex gap-1.5 mb-0.5"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                {(['hot', 'iced'] as const).map(temp => {
+                                  const selected = getDrinkTemp(item) === temp
+                                  const isHot = temp === 'hot'
+                                  return (
+                                    <button
+                                      key={temp}
+                                      onClick={() => setDrinkTemp(prev => ({ ...prev, [item.id]: temp }))}
+                                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                                        selected
+                                          ? isHot
+                                            ? 'bg-red-500 text-white border-red-500'
+                                            : 'bg-blue-500 text-white border-blue-500'
+                                          : isHot
+                                          ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
+                                          : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
+                                      }`}
+                                    >
+                                      {isHot ? '☕ Hot' : '🧊 Iced'}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )}
+                            {item.calories !== undefined && (
+                              <p className="text-xs text-gray-500">
+                                🔥 <span className="font-medium">{item.calories} cal</span>
+                              </p>
+                            )}
+                            {item.ingredients && item.ingredients.length > 0 && (
+                              <p className="text-xs text-gray-500">
+                                🌿 <span className="font-medium">Ingredients:</span>{' '}
+                                {item.ingredients.join(', ')}
+                              </p>
+                            )}
+                            {item.allergens && item.allergens.length > 0 && (
+                              <p className="text-xs text-gray-500">
+                                ⚠️ <span className="font-medium">Allergens:</span>{' '}
+                                {item.allergens.join(', ')}
+                              </p>
+                            )}
+                            {item.allergens && item.allergens.length === 0 && (
+                              <p className="text-xs text-gray-400">✅ No common allergens</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )
@@ -415,6 +821,16 @@ export default function MenuPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Review Modal */}
+      {showReviews && (
+        <ReviewModal
+          reviews={reviews}
+          loading={reviewsLoading}
+          onClose={() => setShowReviews(false)}
+          onSubmit={submitReview}
+        />
       )}
     </main>
   )

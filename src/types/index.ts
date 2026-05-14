@@ -7,6 +7,10 @@ export interface MenuItem {
   price: number
   category: string
   emoji: string
+  calories?: number
+  allergens?: string[]
+  ingredients?: string[]
+  tempOptions?: ('hot' | 'iced')[]
 }
 
 export interface OrderItem {
