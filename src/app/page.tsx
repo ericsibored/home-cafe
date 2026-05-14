@@ -13,6 +13,7 @@ interface PlacedOrder {
   id: string
   total: number
   venmoNote: string
+  ticketCode?: string
 }
 
 interface Review {
@@ -21,6 +22,8 @@ interface Review {
   rating: number
   comment: string | null
   created_at: string
+  item_id?: string | null
+  ticket_code?: string | null
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -71,21 +74,27 @@ function StarRating({
 
 // ── Review Modal ───────────────────────────────────────────────────────────────
 
+type TicketItem = { id: string; name: string }
+
 function ReviewModal({
   reviews,
   loading,
   onClose,
-  onSubmit,
+  onNewReviews,
 }: {
   reviews: Review[]
   loading: boolean
   onClose: () => void
-  onSubmit: (name: string, rating: number, comment: string) => Promise<void>
+  onNewReviews: (newReviews: Review[]) => void
 }) {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
-  const [rating, setRating] = useState(0)
-  const [comment, setComment] = useState('')
+  const [ticketCode, setTicketCode] = useState('')
+  const [orderItems, setOrderItems] = useState<TicketItem[] | null>(null)
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupError, setLookupError] = useState('')
+  const [itemRatings, setItemRatings] = useState<Record<string, number>>({})
+  const [itemComments, setItemComments] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -106,18 +115,68 @@ function ReviewModal({
     count: reviews.filter(r => r.rating === star).length,
   }))
 
+  const resetForm = () => {
+    setName('')
+    setTicketCode('')
+    setOrderItems(null)
+    setLookupError('')
+    setItemRatings({})
+    setItemComments({})
+    setSubmitError('')
+  }
+
+  const lookupOrder = async () => {
+    if (ticketCode.length !== 4) { setLookupError('Please enter a 4-digit code.'); return }
+    setLookupLoading(true)
+    setLookupError('')
+    setOrderItems(null)
+    try {
+      const res = await fetch(`/api/orders?code=${ticketCode}`)
+      const body = await res.json()
+      if (!res.ok || body?.error) {
+        setLookupError('Code not found. Please check your ticket.')
+        return
+      }
+      const items: TicketItem[] = Array.isArray(body.items) ? body.items : []
+      if (items.length === 0) {
+        setLookupError('No items found for this ticket.')
+        return
+      }
+      setOrderItems(items)
+    } catch {
+      setLookupError('Something went wrong. Try again.')
+    } finally {
+      setLookupLoading(false)
+    }
+  }
+
   const handleSubmit = async () => {
     if (!name.trim()) { setSubmitError('Please enter your first name.'); return }
-    if (rating === 0) { setSubmitError('Please choose a star rating.'); return }
+    const ratedItems = (orderItems ?? []).filter(item => (itemRatings[item.id] ?? 0) > 0)
+    if (ratedItems.length === 0) { setSubmitError('Please rate at least one item.'); return }
     setSubmitting(true)
     setSubmitError('')
     try {
-      await onSubmit(name.trim(), rating, comment.trim())
+      const newReviews: Review[] = []
+      for (const item of ratedItems) {
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reviewer_name: name.trim(),
+            rating: itemRatings[item.id],
+            comment: itemComments[item.id]?.trim() || null,
+            ticket_code: ticketCode,
+            item_id: item.id,
+          }),
+        })
+        const body = await res.json()
+        if (!res.ok) throw new Error(body.error ?? 'Failed to submit')
+        newReviews.push(body)
+      }
+      onNewReviews(newReviews)
       setSubmitted(true)
       setShowForm(false)
-      setName('')
-      setRating(0)
-      setComment('')
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
@@ -186,14 +245,14 @@ function ReviewModal({
             </div>
           </div>
 
-          {/* Write a Review CTA / success */}
+          {/* Write a Review CTA / ticket form */}
           <div className="px-5 py-4 border-b border-gray-100">
             {submitted && !showForm ? (
               <div className="text-center py-2">
                 <p className="text-2xl mb-1">🎉</p>
                 <p className="text-sm font-semibold text-[#1e3a5f]">Thanks for your review!</p>
                 <button
-                  onClick={() => { setSubmitted(false); setShowForm(true) }}
+                  onClick={() => { setSubmitted(false); setShowForm(true); resetForm() }}
                   className="text-xs text-[#4a6fa8] underline mt-1"
                 >
                   Leave another
@@ -207,8 +266,9 @@ function ReviewModal({
                 ✍️ Write a Review
               </button>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <p className="text-sm font-semibold text-[#1e3a5f]">Your Review</p>
+
                 {/* Name */}
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">First name *</label>
@@ -220,48 +280,82 @@ function ReviewModal({
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8fafee]"
                   />
                 </div>
-                {/* Star picker */}
+
+                {/* Ticket code */}
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Rating *</label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map(s => (
-                      <button
-                        key={s}
-                        onClick={() => setRating(s)}
-                        className="text-3xl leading-none transition-transform active:scale-110"
-                      >
-                        <span className={s <= rating ? 'text-[#8fafee]' : 'text-gray-200'}>★</span>
-                      </button>
-                    ))}
-                    {rating > 0 && (
-                      <span className="self-center text-xs text-gray-400 ml-1">
-                        {['', 'Not for me', 'It\'s okay', 'Pretty good', 'Really good', 'Obsessed'][rating]}
-                      </span>
-                    )}
+                  <label className="text-xs text-gray-500 mb-2 block">Ticket code *</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      placeholder="0000"
+                      value={ticketCode}
+                      onChange={e => {
+                        setTicketCode(e.target.value.replace(/\D/g, '').slice(0, 4))
+                        setOrderItems(null)
+                        setLookupError('')
+                      }}
+                      className="flex-1 text-center text-2xl font-bold tracking-widest border-2 border-gray-200 rounded-xl py-3 focus:border-[#8fafee] focus:outline-none focus:ring-2 focus:ring-[#8fafee]/30"
+                    />
+                    <button
+                      onClick={lookupOrder}
+                      disabled={lookupLoading || ticketCode.length !== 4}
+                      className="px-4 rounded-xl bg-[#8fafee] hover:bg-[#7a9de6] disabled:opacity-40 text-[#1e3a5f] text-sm font-semibold transition-colors flex-shrink-0"
+                    >
+                      {lookupLoading ? '…' : 'Look up'}
+                    </button>
                   </div>
+                  {lookupError && <p className="text-red-500 text-xs mt-1">{lookupError}</p>}
                 </div>
-                {/* Comment */}
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Comment <span className="text-gray-300">(optional)</span></label>
-                  <textarea
-                    placeholder="What did you love? Any standouts?"
-                    value={comment}
-                    onChange={e => setComment(e.target.value)}
-                    rows={3}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8fafee] resize-none"
-                  />
-                </div>
+
+                {/* Order items — shown after successful ticket lookup */}
+                {orderItems && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500 font-medium">Rate your items:</p>
+                    {orderItems.map(item => (
+                      <div key={item.id} className="bg-[#f6e7d7]/40 rounded-xl p-3 space-y-2">
+                        <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                        <div className="flex gap-1 items-center">
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <button
+                              key={s}
+                              onClick={() => setItemRatings(prev => ({ ...prev, [item.id]: s }))}
+                              className="text-2xl leading-none transition-transform active:scale-110"
+                            >
+                              <span className={s <= (itemRatings[item.id] ?? 0) ? 'text-[#8fafee]' : 'text-gray-200'}>★</span>
+                            </button>
+                          ))}
+                          {(itemRatings[item.id] ?? 0) > 0 && (
+                            <span className="text-xs text-gray-400 ml-1">
+                              {['', 'Not for me', 'It\'s okay', 'Pretty good', 'Really good', 'Obsessed'][itemRatings[item.id]]}
+                            </span>
+                          )}
+                        </div>
+                        <textarea
+                          placeholder="Any thoughts? (optional)"
+                          value={itemComments[item.id] ?? ''}
+                          onChange={e => setItemComments(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          rows={2}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8fafee] resize-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {submitError && <p className="text-red-500 text-xs">{submitError}</p>}
+
                 <div className="flex gap-2">
                   <button
-                    onClick={() => { setShowForm(false); setSubmitError('') }}
+                    onClick={() => { setShowForm(false); resetForm() }}
                     className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-semibold hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSubmit}
-                    disabled={submitting}
+                    disabled={submitting || !orderItems}
                     className="flex-1 py-2.5 rounded-xl bg-[#8fafee] hover:bg-[#7a9de6] disabled:opacity-40 text-[#1e3a5f] text-sm font-semibold transition-colors"
                   >
                     {submitting ? 'Submitting…' : 'Submit'}
@@ -284,30 +378,36 @@ function ReviewModal({
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {reviews.map(review => (
-                  <div key={review.id} className="py-4">
-                    <div className="flex items-start gap-3">
-                      {/* Avatar */}
-                      <div className="w-9 h-9 rounded-full bg-[#d9e8fa] flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-bold text-[#4a6fa8]">
-                          {review.reviewer_name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{review.reviewer_name}</p>
-                          <p className="text-xs text-gray-400 flex-shrink-0">{formatDate(review.created_at)}</p>
+                {reviews.map(review => {
+                  const menuItem = review.item_id ? MENU.find(m => m.id === review.item_id) : null
+                  return (
+                    <div key={review.id} className="py-4">
+                      <div className="flex items-start gap-3">
+                        {/* Avatar */}
+                        <div className="w-9 h-9 rounded-full bg-[#d9e8fa] flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-[#4a6fa8]">
+                            {review.reviewer_name.charAt(0).toUpperCase()}
+                          </span>
                         </div>
-                        <div className="mt-0.5">
-                          <StarDisplay rating={review.rating} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{review.reviewer_name}</p>
+                            <p className="text-xs text-gray-400 flex-shrink-0">{formatDate(review.created_at)}</p>
+                          </div>
+                          {menuItem && (
+                            <p className="text-xs text-[#4a6fa8] font-medium mt-0.5">{menuItem.emoji} {menuItem.name}</p>
+                          )}
+                          <div className="mt-0.5">
+                            <StarDisplay rating={review.rating} size="sm" />
+                          </div>
+                          {review.comment && (
+                            <p className="mt-1.5 text-sm text-gray-600 leading-relaxed">{review.comment}</p>
+                          )}
                         </div>
-                        {review.comment && (
-                          <p className="mt-1.5 text-sm text-gray-600 leading-relaxed">{review.comment}</p>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -475,16 +575,8 @@ export default function MenuPage() {
       .finally(() => setReviewsLoading(false))
   }, [showReviews])
 
-  const submitReview = async (name: string, rating: number, comment: string) => {
-    const res = await fetch('/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewer_name: name, rating, comment }),
-    })
-    const body = await res.json()
-    if (!res.ok) throw new Error(body.error ?? 'Failed to submit')
-    // Prepend new review optimistically
-    setReviews(prev => [body, ...prev])
+  const handleNewReviews = (newReviews: Review[]) => {
+    setReviews(prev => [...newReviews, ...prev])
   }
 
   const rate = (itemId: string, stars: number) => {
@@ -528,7 +620,7 @@ export default function MenuPage() {
       const text = await res.text()
       const body = text ? JSON.parse(text) : {}
       if (!res.ok) throw new Error(body.error ?? `Server error ${res.status}`)
-      setPlacedOrder({ id: body.id, total, venmoNote })
+      setPlacedOrder({ id: body.id, total, venmoNote, ticketCode: body.ticket_code })
       setCart(new Map())
       setCustomerName('')
       setNote('')
@@ -553,10 +645,17 @@ export default function MenuPage() {
           <div className="text-5xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-[#1e3a5f] mb-1">Order placed!</h2>
           <p className="text-gray-500 text-sm mb-6">Complete your payment to confirm.</p>
-          <div className="bg-[#f6e7d7] rounded-xl p-4 mb-6">
+          <div className="bg-[#f6e7d7] rounded-xl p-4 mb-4">
             <p className="text-xs text-gray-400 mb-1">Total due</p>
             <p className="text-4xl font-bold text-[#1e3a5f]">${amount}</p>
           </div>
+          {placedOrder.ticketCode && (
+            <div className="bg-[#d9e8fa] rounded-xl p-4 mb-4">
+              <p className="text-xs text-gray-500 mb-1 text-center">Your review ticket code</p>
+              <p className="text-3xl font-black text-[#1e3a5f] tracking-[0.5em] text-center">{placedOrder.ticketCode}</p>
+              <p className="text-xs text-gray-400 text-center mt-1">Save this to leave a review after your meal</p>
+            </div>
+          )}
           <div className="mb-5">
             <p className="text-xs text-gray-400 mb-3">📱 On your phone — scan to open Venmo</p>
             <div className="flex justify-center">
@@ -642,7 +741,7 @@ export default function MenuPage() {
                   : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}
             >
-              {t === 'menu' ? 'Menu' : 'Stack Rank'}
+              {t === 'menu' ? 'Menu' : 'Play Beli'}
             </button>
           ))}
         </div>
@@ -710,8 +809,9 @@ export default function MenuPage() {
                             </button>
                           </div>
                         </div>
+                        {/* Star ratings hidden — data/logic preserved, re-enable by removing 'hidden' */}
                         <div
-                          className="flex items-center gap-2 mt-2 pl-11"
+                          className="hidden flex items-center gap-2 mt-2 pl-11"
                           onClick={e => e.stopPropagation()}
                         >
                           <StarRating rating={ratings[item.id] ?? 0} onRate={r => rate(item.id, r)} />
@@ -829,7 +929,7 @@ export default function MenuPage() {
           reviews={reviews}
           loading={reviewsLoading}
           onClose={() => setShowReviews(false)}
-          onSubmit={submitReview}
+          onNewReviews={handleNewReviews}
         />
       )}
     </main>
