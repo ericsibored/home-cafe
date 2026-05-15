@@ -14,6 +14,7 @@ interface PlacedOrder {
   total: number
   venmoNote: string
   ticketCode?: string
+  items: OrderItem[]
 }
 
 interface Review {
@@ -543,6 +544,8 @@ export default function MenuPage() {
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null)
+  const [tipOption, setTipOption] = useState<'15' | '18' | '20' | 'none' | 'custom' | null>(null)
+  const [customTipStr, setCustomTipStr] = useState('')
   const [error, setError] = useState('')
   const [ratings, setRatings] = useState<Record<string, number>>({})
   const [expandedItem, setExpandedItem] = useState<string | null>(null)
@@ -620,7 +623,7 @@ export default function MenuPage() {
       const text = await res.text()
       const body = text ? JSON.parse(text) : {}
       if (!res.ok) throw new Error(body.error ?? `Server error ${res.status}`)
-      setPlacedOrder({ id: body.id, total, venmoNote, ticketCode: body.ticket_code })
+      setPlacedOrder({ id: body.id, total, venmoNote, ticketCode: body.ticket_code, items: cartItems })
       setCart(new Map())
       setCustomerName('')
       setNote('')
@@ -634,48 +637,180 @@ export default function MenuPage() {
   const venmoUsername = process.env.NEXT_PUBLIC_VENMO_USERNAME ?? 'your-venmo'
 
   if (placedOrder) {
-    const encodedNote = encodeURIComponent(placedOrder.venmoNote)
-    const amount = placedOrder.total.toFixed(2)
+    const subtotal = placedOrder.total
+    const COVER = 5.00
+    const TIP_PCTS = [15, 18, 20] as const
+    const customTipAmt = parseFloat(customTipStr.replace(/[^0-9.]/g, '')) || 0
+    const tipAmount = !tipOption || tipOption === 'none' ? 0
+      : tipOption === 'custom' ? customTipAmt
+      : Math.round(subtotal * parseInt(tipOption)) / 100
+    const grandTotal = subtotal + COVER + tipAmount
+    const amount = grandTotal.toFixed(2)
+
+    const venmoNoteWithExtras = [
+      placedOrder.venmoNote,
+      `$${COVER.toFixed(2)} cover`,
+      tipAmount > 0 ? `$${tipAmount.toFixed(2)} tip` : null,
+    ].filter(Boolean).join(' + ')
+    const encodedNote = encodeURIComponent(venmoNoteWithExtras)
     const deepLink = `venmo://paycharge?txn=pay&recipients=${venmoUsername}&amount=${amount}&note=${encodedNote}`
     const webLink = `https://venmo.com/${venmoUsername}?txn=pay&amount=${amount}&note=${encodedNote}`
 
     return (
-      <main className="min-h-screen bg-[#f6e7d7] flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-lg text-center">
-          <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-[#1e3a5f] mb-1">Order placed!</h2>
-          <p className="text-gray-500 text-sm mb-6">Complete your payment to confirm.</p>
-          <div className="bg-[#f6e7d7] rounded-xl p-4 mb-4">
-            <p className="text-xs text-gray-400 mb-1">Total due</p>
-            <p className="text-4xl font-bold text-[#1e3a5f]">${amount}</p>
+      <main className="min-h-screen bg-[#f6e7d7] flex items-start justify-center p-4 pt-8 pb-12">
+        <div className="bg-white rounded-2xl max-w-sm w-full shadow-lg overflow-hidden">
+
+          {/* Header */}
+          <div className="bg-[#8fafee] px-6 py-5 text-center">
+            <div className="text-3xl mb-1">✅</div>
+            <h2 className="text-xl font-bold text-[#1e3a5f]">Order placed!</h2>
+            <p className="text-[#4a6fa8] text-sm mt-1">Here&apos;s what you ordered</p>
           </div>
-          {placedOrder.ticketCode && (
-            <div className="bg-[#d9e8fa] rounded-xl p-4 mb-4">
-              <p className="text-xs text-gray-500 mb-1 text-center">Your review ticket code</p>
-              <p className="text-3xl font-black text-[#1e3a5f] tracking-[0.5em] text-center">{placedOrder.ticketCode}</p>
-              <p className="text-xs text-gray-400 text-center mt-1">Save this to leave a review after your meal</p>
+
+          <div className="px-5 py-5 space-y-4">
+
+            {/* Itemized list */}
+            <div className="space-y-1.5">
+              {placedOrder.items.map(item => (
+                <div key={item.id} className="flex justify-between items-baseline text-sm">
+                  <span className="text-gray-700">
+                    {item.quantity > 1 ? `${item.quantity}× ` : ''}{item.name}
+                  </span>
+                  <span className="text-gray-900 font-medium tabular-nums">
+                    ${(item.price * item.quantity).toFixed(2)}
+                  </span>
+                </div>
+              ))}
             </div>
-          )}
-          <div className="mb-5">
-            <p className="text-xs text-gray-400 mb-3">📱 On your phone — scan to open Venmo</p>
-            <div className="flex justify-center">
-              <QRCodeSVG value={deepLink} size={160} />
+
+            {/* Running totals */}
+            <div className="border-t border-dashed border-gray-200 pt-3 space-y-1.5">
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>Subtotal</span>
+                <span className="tabular-nums">${subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>Cover charge</span>
+                <span className="tabular-nums">${COVER.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>Tip</span>
+                <span className="tabular-nums">${tipAmount.toFixed(2)}</span>
+              </div>
             </div>
+
+            {/* Grand total */}
+            <div className="flex justify-between items-center border-t border-gray-200 pt-3">
+              <span className="font-bold text-[#1e3a5f] text-base">Total</span>
+              <span className="text-2xl font-bold text-[#1e3a5f] tabular-nums">${grandTotal.toFixed(2)}</span>
+            </div>
+
+            {/* Tip selection */}
+            <div className="bg-[#f6e7d7]/60 rounded-2xl p-4 space-y-3">
+              <p className="text-sm font-semibold text-[#1e3a5f]">Add a tip? 🙏</p>
+              <div className="grid grid-cols-4 gap-2">
+                {TIP_PCTS.map(pct => {
+                  const amt = Math.round(subtotal * pct) / 100
+                  const selected = tipOption === String(pct)
+                  return (
+                    <button
+                      key={pct}
+                      onClick={() => setTipOption(String(pct) as '15' | '18' | '20')}
+                      className={`py-2.5 rounded-xl border-2 text-center transition-all ${
+                        selected
+                          ? 'bg-[#8fafee] border-[#8fafee] text-[#1e3a5f] shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-[#8fafee] text-gray-700'
+                      }`}
+                    >
+                      <p className="text-xs font-bold leading-none">{pct}%</p>
+                      <p className={`text-xs mt-0.5 leading-none ${selected ? 'text-[#1e3a5f]' : 'text-gray-400'}`}>
+                        ${amt.toFixed(2)}
+                      </p>
+                    </button>
+                  )
+                })}
+                <button
+                  onClick={() => setTipOption('none')}
+                  className={`py-2.5 rounded-xl border-2 text-center text-xs font-semibold transition-all leading-tight ${
+                    tipOption === 'none'
+                      ? 'bg-[#8fafee] border-[#8fafee] text-[#1e3a5f] shadow-sm'
+                      : 'border-gray-200 bg-white hover:border-[#8fafee] text-gray-500'
+                  }`}
+                >
+                  No tip
+                </button>
+              </div>
+
+              {/* Custom tip */}
+              <div>
+                <button
+                  onClick={() => setTipOption('custom')}
+                  className={`text-xs flex items-center gap-1 transition-colors ${
+                    tipOption === 'custom'
+                      ? 'text-[#1e3a5f] font-semibold'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  ✏️ Custom amount
+                </button>
+                {tipOption === 'custom' && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <span className="text-gray-400 text-sm font-medium">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.50"
+                      placeholder="0.00"
+                      value={customTipStr}
+                      onChange={e => setCustomTipStr(e.target.value)}
+                      autoFocus
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8fafee]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-400">Tips are split evenly among your hosts 🤍</p>
+            </div>
+
+            {/* Ticket code */}
+            {placedOrder.ticketCode && (
+              <div className="bg-[#d9e8fa] rounded-xl p-4">
+                <p className="text-xs text-gray-500 mb-1 text-center">Your review ticket code</p>
+                <p className="text-3xl font-black text-[#1e3a5f] tracking-[0.5em] text-center">
+                  {placedOrder.ticketCode}
+                </p>
+                <p className="text-xs text-gray-400 text-center mt-1">
+                  Save this to leave a review after your meal
+                </p>
+              </div>
+            )}
+
+            {/* Venmo QR */}
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-3">📱 On your phone — scan to open Venmo</p>
+              <div className="flex justify-center">
+                <QRCodeSVG value={deepLink} size={140} />
+              </div>
+            </div>
+
+            {/* Pay button */}
+            <a
+              href={webLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-xl text-center transition-colors"
+            >
+              Pay on Venmo.com
+            </a>
+
+            <button
+              onClick={() => { setPlacedOrder(null); setTipOption(null); setCustomTipStr('') }}
+              className="w-full text-sm text-gray-400 hover:text-gray-600 underline py-1"
+            >
+              Place another order
+            </button>
           </div>
-          <a
-            href={webLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-xl mb-6 transition-colors"
-          >
-            Pay on Venmo.com
-          </a>
-          <button
-            onClick={() => setPlacedOrder(null)}
-            className="text-sm text-gray-400 hover:text-gray-600 underline"
-          >
-            Place another order
-          </button>
         </div>
       </main>
     )
