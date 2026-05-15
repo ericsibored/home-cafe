@@ -637,19 +637,19 @@ export default function MenuPage() {
   const venmoUsername = process.env.NEXT_PUBLIC_VENMO_USERNAME ?? 'your-venmo'
 
   if (placedOrder) {
-    const subtotal = placedOrder.total
-    const COVER = 5.00
+    const subtotal = placedOrder.total   // pre-discount food total
+    const discount = subtotal            // 100% off food
     const TIP_PCTS = [15, 18, 20] as const
     const customTipAmt = parseFloat(customTipStr.replace(/[^0-9.]/g, '')) || 0
+    // Tips are calculated against pre-discount subtotal, not zero
     const tipAmount = !tipOption || tipOption === 'none' ? 0
       : tipOption === 'custom' ? customTipAmt
       : Math.round(subtotal * parseInt(tipOption)) / 100
-    const grandTotal = subtotal + COVER + tipAmount
+    const grandTotal = tipAmount   // food is free; total = tip only
     const amount = grandTotal.toFixed(2)
 
     const venmoNoteWithExtras = [
       placedOrder.venmoNote,
-      `$${COVER.toFixed(2)} cover`,
       tipAmount > 0 ? `$${tipAmount.toFixed(2)} tip` : null,
     ].filter(Boolean).join(' + ')
     const encodedNote = encodeURIComponent(venmoNoteWithExtras)
@@ -685,18 +685,20 @@ export default function MenuPage() {
 
             {/* Running totals */}
             <div className="border-t border-dashed border-gray-200 pt-3 space-y-1.5">
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>Subtotal</span>
-                <span className="tabular-nums">${subtotal.toFixed(2)}</span>
+              <div className="flex justify-between text-sm text-gray-400">
+                <span className="line-through">Subtotal</span>
+                <span className="tabular-nums line-through">${subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>Cover charge</span>
-                <span className="tabular-nums">${COVER.toFixed(2)}</span>
+              <div className="flex justify-between text-sm text-green-600 font-medium">
+                <span>Discount (100% off 🎉) — It&apos;s on us!</span>
+                <span className="tabular-nums">−${discount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>Tip</span>
-                <span className="tabular-nums">${tipAmount.toFixed(2)}</span>
-              </div>
+              {tipAmount > 0 && (
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Tip</span>
+                  <span className="tabular-nums">${tipAmount.toFixed(2)}</span>
+                </div>
+              )}
             </div>
 
             {/* Grand total */}
@@ -707,7 +709,7 @@ export default function MenuPage() {
 
             {/* Tip selection */}
             <div className="bg-[#f6e7d7]/60 rounded-2xl p-4 space-y-3">
-              <p className="text-sm font-semibold text-[#1e3a5f]">Add a tip? 🙏</p>
+              <p className="text-sm font-semibold text-[#1e3a5f]">Add a tip? 🙏 <span className="font-normal text-gray-400">(based on your ${subtotal.toFixed(2)} order)</span></p>
               <div className="grid grid-cols-4 gap-2">
                 {TIP_PCTS.map(pct => {
                   const amt = Math.round(subtotal * pct) / 100
