@@ -488,6 +488,13 @@ function ReviewModal({
 }
 
 // ── Stack Rank Tab ────────────────────────────────────────────────────────────
+type LeaderboardEntry = {
+  item_id: string
+  avg_score: number
+  submission_count: number
+  players: string[]
+}
+
 function generateMatchups(items: MenuItem[], count: number): [MenuItem, MenuItem][] {
   const pairs: [MenuItem, MenuItem][] = []
   for (let i = 0; i < items.length; i++)
@@ -496,11 +503,58 @@ function generateMatchups(items: MenuItem[], count: number): [MenuItem, MenuItem
   return [...pairs].sort(() => Math.random() - 0.5).slice(0, count)
 }
 
-function RankTab({ ratings }: { ratings: Record<string, number> }) {
+function ScoreBar({ score }: { score: number }) {
+  const pct = Math.min(100, (score / 10) * 100)
+  const color = score >= 7.5 ? C.green : score >= 4.5 ? C.blue : C.amber
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ flex: 1, background: C.pale, borderRadius: 999, height: 7, overflow: 'hidden' }}>
+        <div style={{ background: color, height: '100%', borderRadius: 999,
+          width: `${pct}%`, transition: 'width 0.7s ease' }} />
+      </div>
+      <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 600, color: C.navy,
+        minWidth: 30, textAlign: 'right' }}>{score.toFixed(1)}</span>
+    </div>
+  )
+}
+
+function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
   const [matchups] = useState(() => generateMatchups(MENU, 10))
   const [current, setCurrent] = useState(0)
   const [wins, setWins] = useState<Record<string, number>>({})
   const [done, setDone] = useState(false)
+  const [view, setView] = useState<'play' | 'leaderboard'>('play')
+  const [playerName, setPlayerName] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [lbLoading, setLbLoading] = useState(false)
+
+  useEffect(() => {
+    if (view !== 'leaderboard') return
+    setLbLoading(true)
+    fetch('/api/rankings')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setLeaderboard(data) })
+      .catch(() => {})
+      .finally(() => setLbLoading(false))
+  }, [view])
+
+  // Compute how many times each item appeared across the 10 matchups
+  const appearances: Record<string, number> = {}
+  for (const [x, y] of matchups) {
+    appearances[x.id] = (appearances[x.id] ?? 0) + 1
+    appearances[y.id] = (appearances[y.id] ?? 0) + 1
+  }
+
+  // Personal scores: win_rate × 10, 0.0–10.0
+  const personalScores = [...MENU].map(item => {
+    const w = wins[item.id] ?? 0
+    const app = appearances[item.id] ?? 0
+    const score = app > 0 ? Math.round((w / app) * 100) / 10 : 5.0
+    return { item, score, wins: w, appearances: app }
+  }).sort((a, b) => b.score - a.score)
 
   const choose = (winner: MenuItem) => {
     const next = { ...wins, [winner.id]: (wins[winner.id] ?? 0) + 1 }
@@ -509,66 +563,276 @@ function RankTab({ ratings }: { ratings: Record<string, number> }) {
     else setCurrent(c => c + 1)
   }
 
-  const restart = () => { setCurrent(0); setWins({}); setDone(false) }
+  const restart = () => {
+    setCurrent(0); setWins({}); setDone(false)
+    setSubmitted(false); setPlayerName(''); setSubmitError('')
+  }
 
-  if (done) {
-    const ranked = [...MENU].sort((a, b) => (wins[b.id] ?? 0) - (wins[a.id] ?? 0))
+  const submitToLeaderboard = async () => {
+    if (!playerName.trim()) { setSubmitError('Please enter your name.'); return }
+    setSubmitting(true); setSubmitError('')
+    try {
+      const res = await fetch('/api/rankings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          player_name: playerName.trim(),
+          scores: personalScores.map(({ item, score, wins: w, appearances: app }) => ({
+            item_id: item.id, score, wins: w, appearances: app,
+          })),
+        }),
+      })
+      if (!res.ok) { const b = await res.json(); throw new Error(b.error ?? 'Failed') }
+      setSubmitted(true)
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'Something went wrong.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Shared tab toggle JSX
+  const tabToggle = (
+    <div style={{ display: 'inline-flex', background: C.pale, borderRadius: 999, padding: 3 }}>
+      {(['play', 'leaderboard'] as const).map(v => (
+        <button key={v} onClick={() => setView(v)} style={{
+          padding: '5px 12px', borderRadius: 999,
+          fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
+          color: view === v ? C.navy : C.midBlue,
+          background: view === v ? C.card : 'transparent',
+          border: 'none', cursor: 'pointer',
+          boxShadow: view === v ? '0 1px 2px rgba(30,58,95,0.10)' : 'none',
+        }}>
+          {v === 'play' ? '🎮 Play' : '🏆 Board'}
+        </button>
+      ))}
+    </div>
+  )
+
+  // ── LEADERBOARD VIEW ──────────────────────────────────────────────────────
+  if (view === 'leaderboard') {
+    const lbItems = [...MENU].map(item => ({
+      item,
+      entry: leaderboard.find(e => e.item_id === item.id) ?? null,
+    })).sort((a, b) => (b.entry?.avg_score ?? -1) - (a.entry?.avg_score ?? -1))
+
+    const totalPlayers = leaderboard.length > 0
+      ? Math.max(...leaderboard.map(e => e.players.length))
+      : 0
+
     return (
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 18px' }}>
-        <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy, marginBottom: 4 }}>
-          Your Rankings
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy }}>
+              Community Rankings
+            </div>
+            <p style={{ fontFamily: SANS, fontSize: 12, color: C.midBlue, marginTop: 2 }}>
+              {totalPlayers > 0
+                ? `${totalPlayers} taster${totalPlayers !== 1 ? 's' : ''} have weighed in`
+                : 'No rankings yet — be the first!'}
+            </p>
+          </div>
+          {tabToggle}
         </div>
-        <p style={{ fontFamily: SANS, fontSize: 12, color: C.midBlue, marginBottom: 24 }}>
-          Based on your head-to-head picks
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {ranked.map((item, i) => {
-            const w = wins[item.id] ?? 0
-            const total = matchups.length
-            const pct = Math.round((w / total) * 100)
-            const starRating = ratings[item.id]
-            return (
-              <div key={item.id} style={{ background: C.card, borderRadius: 18, padding: 16,
-                display: 'flex', alignItems: 'center', gap: 12,
-                boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
-                <span style={{ fontWeight: 800, color: C.blue, width: 28, textAlign: 'center', fontSize: 18 }}>
-                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
-                </span>
-                <span style={{ fontSize: 22 }}>{item.emoji}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontFamily: SERIF, fontWeight: 500, color: C.navy, fontSize: 15 }}>{item.name}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                    <div style={{ flex: 1, background: C.pale, borderRadius: 999, height: 6, overflow: 'hidden' }}>
-                      <div style={{ background: C.blue, height: '100%', borderRadius: 999, width: `${pct}%` }} />
+
+        {lbLoading ? (
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
+            <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink3 }}>Loading rankings…</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {lbItems.map(({ item, entry }, i) => {
+              const hasData = !!entry
+              return (
+                <div key={item.id} style={{ background: C.card, borderRadius: 18, padding: 16,
+                  boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                    <span style={{ fontWeight: 800, fontSize: 18, width: 24, textAlign: 'center' }}>
+                      {i === 0 && hasData ? '🥇' : i === 1 && hasData ? '🥈' : i === 2 && hasData ? '🥉' : `#${i + 1}`}
+                    </span>
+                    <span style={{ fontSize: 22 }}>{item.emoji}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: SERIF, fontWeight: 500, color: C.navy, fontSize: 15 }}>
+                        {item.name}
+                      </p>
+                      <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginTop: 1 }}>
+                        {hasData
+                          ? `${entry!.submission_count} rating${entry!.submission_count !== 1 ? 's' : ''}`
+                          : 'No ratings yet'}
+                      </p>
                     </div>
-                    <span style={{ fontFamily: SANS, fontSize: 11, color: C.ink3 }}>{w}W</span>
                   </div>
+                  {hasData ? (
+                    <>
+                      <ScoreBar score={entry!.avg_score} />
+                      {entry!.players.length > 0 && (
+                        <div style={{ marginTop: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {entry!.players.slice(0, 8).map(p => (
+                            <span key={p} style={{ fontFamily: SANS, fontSize: 10.5, color: C.midBlue,
+                              background: C.pale, borderRadius: 999, padding: '2px 8px' }}>
+                              {p}
+                            </span>
+                          ))}
+                          {entry!.players.length > 8 && (
+                            <span style={{ fontFamily: SANS, fontSize: 10.5, color: C.ink3 }}>
+                              +{entry!.players.length - 8} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1, background: C.pale, borderRadius: 999, height: 7 }} />
+                      <span style={{ fontFamily: MONO, fontSize: 14, color: C.ink3, minWidth: 30, textAlign: 'right' }}>—</span>
+                    </div>
+                  )}
                 </div>
-                {starRating > 0 && <Stars value={starRating} size={12} />}
-              </div>
-            )
-          })}
-        </div>
-        <button onClick={restart} style={{
+              )
+            })}
+          </div>
+        )}
+
+        <button onClick={() => { setView('play'); if (!done) {} }} style={{
           marginTop: 20, width: '100%', padding: '13px 0', borderRadius: 999,
           border: `1px solid ${C.blue}`, background: 'transparent',
           fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.navy, cursor: 'pointer',
         }}>
-          Play again
+          🎮 Play &amp; add your score
         </button>
       </div>
     )
   }
 
+  // ── RESULTS VIEW (game done) ──────────────────────────────────────────────
+  if (done) {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy }}>
+              Your Rankings
+            </div>
+            <p style={{ fontFamily: SANS, fontSize: 12, color: C.midBlue, marginTop: 2 }}>
+              Based on your head-to-head picks
+            </p>
+          </div>
+          {tabToggle}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {personalScores.map((s, i) => (
+            <div key={s.item.id} style={{ background: C.card, borderRadius: 18, padding: 16,
+              boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                <span style={{ fontWeight: 800, fontSize: 18, width: 24, textAlign: 'center' }}>
+                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                </span>
+                <span style={{ fontSize: 22 }}>{s.item.emoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontFamily: SERIF, fontWeight: 500, color: C.navy, fontSize: 15 }}>
+                    {s.item.name}
+                  </p>
+                  <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginTop: 1 }}>
+                    {s.appearances > 0
+                      ? `${s.wins}W / ${s.appearances} match${s.appearances !== 1 ? 'ups' : 'up'}`
+                      : 'didn\'t appear'}
+                  </p>
+                </div>
+              </div>
+              <ScoreBar score={s.score} />
+            </div>
+          ))}
+        </div>
+
+        {/* Submit to leaderboard */}
+        <div style={{ marginTop: 16, background: C.surface, borderRadius: 20, padding: 18,
+          boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
+          {submitted ? (
+            <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <p style={{ fontSize: 28, marginBottom: 8 }}>🎉</p>
+              <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: C.navy }}>
+                You&apos;re on the board!
+              </p>
+              <p style={{ fontFamily: SANS, fontSize: 12, color: C.ink2, marginTop: 4 }}>
+                Your scores were added to the community rankings.
+              </p>
+              <button onClick={() => setView('leaderboard')} style={{
+                marginTop: 12, padding: '10px 24px', borderRadius: 999,
+                background: C.blue, border: 'none',
+                fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.navy, cursor: 'pointer',
+              }}>
+                See Leaderboard →
+              </button>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 17, color: C.navy, marginBottom: 4 }}>
+                Add your score to the leaderboard
+              </p>
+              <p style={{ fontFamily: SANS, fontSize: 12, color: C.ink2, marginBottom: 12 }}>
+                Share your rankings with everyone at the table
+              </p>
+              <input
+                type="text"
+                placeholder="Your first name"
+                value={playerName}
+                onChange={e => { setPlayerName(e.target.value); setSubmitError('') }}
+                style={{ width: '100%', border: `1px solid ${C.rule}`, borderRadius: 12,
+                  padding: '10px 14px', fontFamily: SANS, fontSize: 14, background: C.card,
+                  outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
+              />
+              {submitError && (
+                <p style={{ fontFamily: SANS, fontSize: 12, color: C.red, marginBottom: 8 }}>{submitError}</p>
+              )}
+              <button
+                onClick={submitToLeaderboard}
+                disabled={submitting || !playerName.trim()}
+                style={{ width: '100%', padding: '13px 0', borderRadius: 999,
+                  background: C.navy, border: 'none',
+                  fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.peach,
+                  cursor: submitting || !playerName.trim() ? 'not-allowed' : 'pointer',
+                  opacity: submitting || !playerName.trim() ? 0.5 : 1 }}>
+                {submitting ? 'Adding to board…' : '🏆 Add to Leaderboard'}
+              </button>
+            </>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+          <button onClick={() => setView('leaderboard')} style={{
+            flex: 1, padding: '11px 0', borderRadius: 999,
+            border: `1px solid ${C.rule}`, background: 'transparent',
+            fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.midBlue, cursor: 'pointer',
+          }}>
+            🏆 View Leaderboard
+          </button>
+          <button onClick={restart} style={{
+            flex: 1, padding: '11px 0', borderRadius: 999,
+            border: `1px solid ${C.blue}`, background: 'transparent',
+            fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.navy, cursor: 'pointer',
+          }}>
+            Play again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── PLAY VIEW (game in progress) ──────────────────────────────────────────
   const [a, b] = matchups[current]
   const progress = Math.round((current / matchups.length) * 100)
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 18px' }}>
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: C.midBlue,
           textTransform: 'uppercase', letterSpacing: 0.8 }}>Which do you prefer?</p>
-        <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink3 }}>{current + 1} / {matchups.length}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: C.ink3 }}>{current + 1} / {matchups.length}</span>
+          {tabToggle}
+        </div>
       </div>
       <div style={{ background: C.pale, borderRadius: 999, height: 4, marginBottom: 24, overflow: 'hidden' }}>
         <div style={{ background: C.blue, height: '100%', borderRadius: 999,
