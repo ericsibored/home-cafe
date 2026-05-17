@@ -33,7 +33,7 @@ const SANS  = 'var(--font-geist-sans), system-ui, sans-serif'
 const MONO  = 'var(--font-geist-mono), monospace'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Tab = 'menu' | 'rank'
+type Tab = 'menu' | 'rank' | 'collage'
 type CatFilter = 'all' | 'drinks' | 'food'
 
 interface PlacedOrder {
@@ -53,6 +53,14 @@ interface Review {
   created_at: string
   item_id?: string | null
   ticket_code?: string | null
+}
+
+interface CollageEntry {
+  id: string
+  photo_url: string
+  note: string | null
+  guest_name: string
+  created_at: string
 }
 
 // ── LazyLogo SVG ──────────────────────────────────────────────────────────────
@@ -860,6 +868,330 @@ function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
   )
 }
 
+// ── Collage Tab ───────────────────────────────────────────────────────────────
+type CameraPhase = 'idle' | 'live' | 'captured'
+
+function CollageTab() {
+  const [phase, setPhase] = useState<CameraPhase>('idle')
+  const [capturedImage, setCapturedImage] = useState<string | null>(null)
+  const [guestName, setGuestName] = useState('')
+  const [noteText, setNoteText] = useState('')
+  const [entries, setEntries] = useState<CollageEntry[]>([])
+  const [loadingEntries, setLoadingEntries] = useState(true)
+  const [posting, setPosting] = useState(false)
+  const [postError, setPostError] = useState('')
+  const [cameraError, setCameraError] = useState('')
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+
+  // Callback ref so we attach the stream the instant the <video> mounts
+  const videoCallbackRef = (node: HTMLVideoElement | null) => {
+    if (node && streamRef.current) {
+      node.srcObject = streamRef.current
+    }
+  }
+
+  // Load entries on mount
+  useEffect(() => {
+    fetch('/api/collage')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setEntries(data) })
+      .catch(() => {})
+      .finally(() => setLoadingEntries(false))
+  }, [])
+
+  // Stop camera stream on unmount (tab switch)
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop())
+    }
+  }, [])
+
+  const startCamera = async () => {
+    setCameraError('')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false,
+      })
+      streamRef.current = stream
+      setPhase('live')
+    } catch {
+      setCameraError('Could not access camera. Please allow camera permissions and try again.')
+    }
+  }
+
+  const snap = () => {
+    const canvas = canvasRef.current
+    // Find the video element via the stream
+    const videoEl = document.querySelector<HTMLVideoElement>('#collage-video')
+    if (!videoEl || !canvas) return
+    canvas.width = videoEl.videoWidth || 640
+    canvas.height = videoEl.videoHeight || 480
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(videoEl, 0, 0)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+    setCapturedImage(dataUrl)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    setPhase('captured')
+  }
+
+  const retake = async () => {
+    setCapturedImage(null)
+    setPostError('')
+    setCameraError('')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false,
+      })
+      streamRef.current = stream
+      setPhase('live')
+    } catch {
+      setCameraError('Could not access camera. Please allow camera permissions.')
+      setPhase('idle')
+    }
+  }
+
+  const post = async () => {
+    if (!guestName.trim()) { setPostError('Please enter your name.'); return }
+    if (!capturedImage) return
+    setPosting(true)
+    setPostError('')
+    try {
+      const res = await fetch('/api/collage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photoBase64: capturedImage,
+          note: noteText.trim() || null,
+          guestName: guestName.trim(),
+        }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error ?? 'Failed to post')
+      setEntries(prev => [body, ...prev])
+      setCapturedImage(null)
+      setGuestName('')
+      setNoteText('')
+      setPhase('idle')
+    } catch (e) {
+      setPostError(e instanceof Error ? e.message : 'Something went wrong.')
+    } finally {
+      setPosting(false)
+    }
+  }
+
+  const ROTATIONS = [
+    'rotate(-2deg)', 'rotate(1.5deg)', 'rotate(-1deg)',
+    'rotate(2.5deg)', 'rotate(-1.5deg)', 'rotate(1deg)',
+  ]
+
+  return (
+    <div style={{ padding: '20px 18px', maxWidth: 680, margin: '0 auto' }}>
+
+      {/* ── Camera section ── */}
+      <div style={{ marginBottom: 32 }}>
+        {phase === 'idle' && (
+          <div style={{ textAlign: 'center', padding: '28px 0' }}>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22,
+              color: C.navy, marginBottom: 8 }}>
+              Add yourself to the wall 📸
+            </p>
+            <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2,
+              marginBottom: 20, lineHeight: 1.5 }}>
+              Leave a little photo memory from your visit
+            </p>
+            {cameraError && (
+              <p style={{ fontFamily: SANS, fontSize: 12, color: C.red, marginBottom: 12 }}>
+                {cameraError}
+              </p>
+            )}
+            <button onClick={startCamera} style={{
+              padding: '16px 40px', borderRadius: 999,
+              background: C.navy, border: 'none',
+              fontFamily: SANS, fontSize: 16, fontWeight: 600,
+              color: C.peach, cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(30,58,95,0.25)',
+            }}>
+              📷 Take a Selfie
+            </button>
+          </div>
+        )}
+
+        {phase === 'live' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+            <div style={{ width: '100%', maxWidth: 400, borderRadius: 20,
+              overflow: 'hidden', background: '#000',
+              boxShadow: '0 8px 32px rgba(30,58,95,0.18)' }}>
+              <video
+                id="collage-video"
+                ref={videoCallbackRef}
+                autoPlay
+                playsInline
+                muted
+                style={{ width: '100%', display: 'block' }}
+              />
+            </div>
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <button onClick={snap} style={{
+              width: 76, height: 76, borderRadius: 999,
+              background: C.card, border: `4px solid ${C.navy}`,
+              cursor: 'pointer', fontSize: 30,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(30,58,95,0.22)',
+              flexShrink: 0,
+            }}>
+              📸
+            </button>
+            <p style={{ fontFamily: SANS, fontSize: 12, color: C.ink3, marginTop: -8 }}>
+              Tap to snap
+            </p>
+          </div>
+        )}
+
+        {phase === 'captured' && capturedImage && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            {/* Polaroid preview */}
+            <div style={{ background: C.card, padding: '12px 12px 22px',
+              boxShadow: '0 8px 32px rgba(30,58,95,0.18)', maxWidth: 280, width: '100%' }}>
+              <img src={capturedImage} alt="Your selfie" style={{
+                width: '100%', aspectRatio: '1', objectFit: 'cover',
+                display: 'block',
+              }} />
+              <p style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic',
+                fontSize: 14, color: C.navy, marginTop: 10 }}>
+                Looking good! ✨
+              </p>
+            </div>
+            {/* Form */}
+            <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                type="text"
+                placeholder="Your first name *"
+                value={guestName}
+                onChange={e => setGuestName(e.target.value)}
+                style={{ border: `1px solid ${C.rule}`, borderRadius: 12,
+                  padding: '10px 14px', fontFamily: SANS, fontSize: 14,
+                  outline: 'none', background: C.card,
+                  boxSizing: 'border-box', width: '100%' }}
+              />
+              <input
+                type="text"
+                placeholder="Add a little message… (optional)"
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                style={{ border: `1px solid ${C.rule}`, borderRadius: 12,
+                  padding: '10px 14px', fontFamily: SANS, fontSize: 14,
+                  outline: 'none', background: C.card,
+                  boxSizing: 'border-box', width: '100%' }}
+              />
+              {postError && (
+                <p style={{ fontFamily: SANS, fontSize: 12, color: C.red }}>{postError}</p>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={retake} style={{
+                  flex: 1, padding: '12px 0', borderRadius: 999,
+                  border: `1px solid ${C.rule}`, background: 'transparent',
+                  fontFamily: SANS, fontSize: 13, fontWeight: 600,
+                  color: C.midBlue, cursor: 'pointer',
+                }}>
+                  Retake
+                </button>
+                <button
+                  onClick={post}
+                  disabled={posting || !guestName.trim()}
+                  style={{
+                    flex: 2, padding: '12px 0', borderRadius: 999,
+                    background: C.navy, border: 'none',
+                    fontFamily: SANS, fontSize: 14, fontWeight: 600,
+                    color: C.peach, cursor: posting || !guestName.trim() ? 'not-allowed' : 'pointer',
+                    opacity: posting || !guestName.trim() ? 0.5 : 1,
+                  }}
+                >
+                  {posting ? 'Posting…' : '🖼️ Post to Collage'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Guest Wall heading ── */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 20 }}>
+        <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: C.navy }}>
+          Guest Wall
+        </div>
+        <div style={{ flex: 1, height: 1, background: C.rule }} />
+        {entries.length > 0 && (
+          <span style={{ fontFamily: SANS, fontSize: 11, color: C.ink3 }}>
+            {entries.length} {entries.length === 1 ? 'photo' : 'photos'}
+          </span>
+        )}
+      </div>
+
+      {/* ── Collage grid ── */}
+      {loadingEntries ? (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink3 }}>Loading photos…</p>
+        </div>
+      ) : entries.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <p style={{ fontSize: 28, marginBottom: 8 }}>🎉</p>
+          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18,
+            color: C.navy, marginBottom: 4 }}>
+            Be the first to add to the collage!
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: 12, color: C.ink3 }}>
+            Take a selfie above and leave your mark
+          </p>
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+          gap: '24px 16px',
+          paddingBottom: 48,
+        }}>
+          {entries.map((entry, i) => (
+            <div key={entry.id} style={{
+              background: C.card,
+              padding: '10px 10px 18px',
+              boxShadow: '0 4px 18px rgba(30,58,95,0.13)',
+              transform: ROTATIONS[i % ROTATIONS.length],
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}>
+              <img
+                src={entry.photo_url}
+                alt={`${entry.guest_name}'s selfie`}
+                style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
+              />
+              <div style={{ marginTop: 10, textAlign: 'center' }}>
+                <p style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 14, color: C.navy,
+                  lineHeight: 1.2 }}>
+                  {entry.guest_name}
+                </p>
+                {entry.note && (
+                  <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink2,
+                    marginTop: 4, lineHeight: 1.4, fontStyle: 'italic' }}>
+                    &ldquo;{entry.note}&rdquo;
+                  </p>
+                )}
+                <p style={{ fontFamily: SANS, fontSize: 10, color: C.ink3, marginTop: 4 }}>
+                  {formatDate(entry.created_at)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function MenuPage() {
   const [tab, setTab] = useState<Tab>('menu')
@@ -1252,24 +1584,26 @@ export default function MenuPage() {
         </div>
       </div>
 
-      {/* Tabs: Menu / Play Beli */}
-      <div style={{ display: 'flex', padding: '4px 18px 0', borderBottom: `1px solid ${C.rule}`, marginTop: 12 }}>
-        {(['menu', 'rank'] as Tab[]).map(t => (
+      {/* Tabs: Menu / Play Beli / Collage */}
+      <div style={{ display: 'flex', padding: '4px 18px 0', borderBottom: `1px solid ${C.rule}`, marginTop: 12, overflowX: 'auto' }}>
+        {(['menu', 'rank', 'collage'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             fontFamily: SANS, fontSize: 14, fontWeight: 500,
             background: 'none', border: 'none', cursor: 'pointer',
-            padding: '8px 16px 9px',
+            padding: '8px 16px 9px', whiteSpace: 'nowrap',
             color: tab === t ? C.navy : C.midBlue,
             borderBottom: tab === t ? `2px solid ${C.blue}` : '2px solid transparent',
             marginBottom: -1,
           }}>
-            {t === 'menu' ? 'Menu' : 'Play Beli'}
+            {t === 'menu' ? 'Menu' : t === 'rank' ? 'Play Beli' : '📸 Collage'}
           </button>
         ))}
       </div>
 
       {tab === 'rank' ? (
         <RankTab ratings={ratings} />
+      ) : tab === 'collage' ? (
+        <CollageTab />
       ) : (
         <>
           {/* Category filter */}
