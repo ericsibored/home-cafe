@@ -871,16 +871,21 @@ function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
 // ── Collage Tab ───────────────────────────────────────────────────────────────
 type CameraPhase = 'idle' | 'live' | 'captured'
 
-function CollageTab() {
+function CollageTab({ cameFromOrder = false, prefillName = '' }: {
+  cameFromOrder?: boolean
+  prefillName?: string
+}) {
   const [phase, setPhase] = useState<CameraPhase>('idle')
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
-  const [guestName, setGuestName] = useState('')
+  const [guestName, setGuestName] = useState(prefillName)
   const [noteText, setNoteText] = useState('')
   const [entries, setEntries] = useState<CollageEntry[]>([])
   const [loadingEntries, setLoadingEntries] = useState(true)
   const [posting, setPosting] = useState(false)
   const [postError, setPostError] = useState('')
   const [cameraError, setCameraError] = useState('')
+  const [skipped, setSkipped] = useState(false)
+  const [postSuccess, setPostSuccess] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
@@ -920,6 +925,10 @@ function CollageTab() {
       setCameraError('Could not access camera. Please allow camera permissions and try again.')
     }
   }
+
+  // Auto-start camera when arriving from a completed order
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (cameFromOrder && !skipped) { startCamera() } }, [])
 
   const snap = () => {
     const canvas = canvasRef.current
@@ -977,6 +986,7 @@ function CollageTab() {
       setGuestName('')
       setNoteText('')
       setPhase('idle')
+      if (cameFromOrder) setPostSuccess(true)
     } catch (e) {
       setPostError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
@@ -992,18 +1002,64 @@ function CollageTab() {
   return (
     <div style={{ padding: '20px 18px', maxWidth: 680, margin: '0 auto' }}>
 
+      {/* ── Warm welcome (from order flow) ── */}
+      {cameFromOrder && !skipped && !postSuccess && (
+        <div style={{ background: 'linear-gradient(135deg, #f6e7d7 0%, #d9e8fa 100%)',
+          borderRadius: 20, padding: '18px 20px', marginBottom: 20, textAlign: 'center',
+          boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
+          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20,
+            color: C.navy, marginBottom: 4 }}>
+            You&apos;re officially part of the cafe! 📸
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, lineHeight: 1.5, marginBottom: 10 }}>
+            Take a quick selfie and we&apos;ll add it to today&apos;s collage
+          </p>
+          <button onClick={() => setSkipped(true)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontFamily: SANS, fontSize: 12, color: C.ink3, textDecoration: 'underline',
+          }}>
+            Skip for now
+          </button>
+        </div>
+      )}
+
+      {/* ── Post-success (from order flow) ── */}
+      {postSuccess && (
+        <div style={{ background: C.surface, borderRadius: 20, padding: '20px',
+          marginBottom: 20, textAlign: 'center', boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
+          <p style={{ fontSize: 28, marginBottom: 8 }}>☕</p>
+          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: C.navy, marginBottom: 4 }}>
+            You&apos;re in the collage!
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2 }}>
+            Enjoy your order ☕
+          </p>
+        </div>
+      )}
+
       {/* ── Camera section ── */}
       <div style={{ marginBottom: 32 }}>
-        {phase === 'idle' && (
+        {phase === 'idle' && !postSuccess && (
           <div style={{ textAlign: 'center', padding: '28px 0' }}>
-            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22,
-              color: C.navy, marginBottom: 8 }}>
-              Add yourself to the wall 📸
-            </p>
-            <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2,
-              marginBottom: 20, lineHeight: 1.5 }}>
-              Leave a little photo memory from your visit
-            </p>
+            {cameFromOrder && !skipped ? (
+              <>
+                <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2,
+                  marginBottom: 20, lineHeight: 1.5 }}>
+                  Camera starting… tap the button below if it doesn&apos;t open automatically
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22,
+                  color: C.navy, marginBottom: 8 }}>
+                  Add yourself to the wall 📸
+                </p>
+                <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2,
+                  marginBottom: 20, lineHeight: 1.5 }}>
+                  Leave a little photo memory from your visit
+                </p>
+              </>
+            )}
             {cameraError && (
               <p style={{ fontFamily: SANS, fontSize: 12, color: C.red, marginBottom: 12 }}>
                 {cameraError}
@@ -1214,6 +1270,11 @@ export default function MenuPage() {
   const [reviews, setReviews] = useState<Review[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
 
+  // ── Post-order collage flow ────────────────────────────────────────────────
+  const [cameFromOrder, setCameFromOrder] = useState(false)
+  const [orderGuestName, setOrderGuestName] = useState('')
+  const [collageCta, setCollageCta] = useState<number | null>(null)
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('loc-ratings')
@@ -1234,6 +1295,40 @@ export default function MenuPage() {
   const handleNewReviews = (newReviews: Review[]) => {
     setReviews(prev => [...newReviews, ...prev])
   }
+
+  // Reset cameFromOrder when user leaves the collage tab
+  useEffect(() => {
+    if (tab !== 'collage') {
+      setCameFromOrder(false)
+      setOrderGuestName('')
+    }
+  }, [tab])
+
+  // Start collage CTA countdown when order is placed
+  useEffect(() => {
+    if (!placedOrder) { setCollageCta(null); return }
+    setCollageCta(4)
+  }, [placedOrder?.id])
+
+  // Tick countdown down
+  useEffect(() => {
+    if (collageCta === null || collageCta <= 0) return
+    const t = setTimeout(() => setCollageCta(c => (c ?? 1) - 1), 1000)
+    return () => clearTimeout(t)
+  }, [collageCta])
+
+  // Navigate to collage when countdown hits 0
+  useEffect(() => {
+    if (collageCta !== 0 || !placedOrder) return
+    setCameFromOrder(true)
+    setOrderGuestName(placedOrder.name)
+    setPlacedOrder(null)
+    setTipOption(null)
+    setCustomTipStr('')
+    setTab('collage')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collageCta])
 
   const rate = (itemId: string, stars: number) => {
     const next = { ...ratings, [itemId]: stars }
@@ -1505,6 +1600,48 @@ export default function MenuPage() {
             </div>
           )}
 
+          {/* Collage CTA */}
+          <div style={{ background: 'linear-gradient(135deg, #f6e7d7 0%, #d9e8fa 100%)',
+            borderRadius: 20, padding: '20px 22px', textAlign: 'center',
+            boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18,
+              color: C.navy, marginBottom: 4 }}>
+              Capture the moment 📸
+            </p>
+            <p style={{ fontFamily: SANS, fontSize: 12, color: C.ink2,
+              marginBottom: 14, lineHeight: 1.5 }}>
+              Take a quick selfie and join today&apos;s guest collage
+            </p>
+            <button
+              onClick={() => {
+                setCollageCta(null)
+                setCameFromOrder(true)
+                setOrderGuestName(placedOrder.name)
+                setPlacedOrder(null)
+                setTipOption(null)
+                setCustomTipStr('')
+                setTab('collage')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              style={{ width: '100%', padding: '14px 0', borderRadius: 999,
+                background: C.navy, border: 'none',
+                fontFamily: SANS, fontSize: 15, fontWeight: 600,
+                color: C.peach, cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(30,58,95,0.22)' }}>
+              📸 Add yourself to the collage
+              {collageCta !== null && collageCta > 0 && (
+                <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 13, opacity: 0.75 }}>
+                  ({collageCta}s)
+                </span>
+              )}
+            </button>
+            <button onClick={() => setCollageCta(null)}
+              style={{ marginTop: 10, background: 'none', border: 'none',
+                cursor: 'pointer', fontFamily: SANS, fontSize: 12, color: C.ink3 }}>
+              Skip for now
+            </button>
+          </div>
+
           {/* QR code */}
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginBottom: 10 }}>
@@ -1605,7 +1742,7 @@ export default function MenuPage() {
       {tab === 'rank' ? (
         <RankTab ratings={ratings} />
       ) : tab === 'collage' ? (
-        <CollageTab />
+        <CollageTab cameFromOrder={cameFromOrder} prefillName={orderGuestName} />
       ) : (
         <>
           {/* Category filter */}
