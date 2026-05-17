@@ -1301,12 +1301,12 @@ export default function MenuPage() {
   if (placedOrder) {
     const subtotal = placedOrder.total
     const discount = subtotal
-    const TIP_AMOUNTS = [1, 1.5, 2, 3]
+    const TIP_PERCENTAGES = [15, 18, 20]
     const customTipAmt = parseFloat(customTipStr.replace(/[^0-9.]/g, '')) || 0
     const tipAmount =
       !tipOption || tipOption === 'none' ? 0
       : tipOption === 'custom' ? customTipAmt
-      : parseFloat(tipOption)
+      : (parseFloat(tipOption) / 100) * subtotal
     const grandTotal = tipAmount
     const amount = grandTotal.toFixed(2)
     const venmoNoteWithExtras = [
@@ -1441,18 +1441,20 @@ export default function MenuPage() {
               Tip the home barista 🙏
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              {TIP_AMOUNTS.map(amt => {
-                const key = String(amt)
+              {TIP_PERCENTAGES.map(pct => {
+                const key = String(pct)
                 const selected = tipOption === key
+                const dollarAmt = (pct / 100) * subtotal
                 return (
                   <button key={key} onClick={() => setTipOption(key)}
                     style={{ flex: 1, padding: '10px 0', textAlign: 'center',
-                      borderRadius: 12, fontFamily: SANS, fontWeight: 600, fontSize: 13,
+                      borderRadius: 12, fontFamily: SANS,
                       background: selected ? C.blue : C.card,
                       color: selected ? C.navy : C.midBlue,
                       border: `1px solid ${selected ? C.blue : C.rule}`,
-                      cursor: 'pointer' }}>
-                    ${amt === 1.5 ? '1.50' : amt}
+                      cursor: 'pointer', lineHeight: 1.2 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{pct}%</div>
+                    <div style={{ fontWeight: 400, fontSize: 11, opacity: 0.7, marginTop: 2 }}>~${dollarAmt.toFixed(2)}</div>
                   </button>
                 )
               })}
