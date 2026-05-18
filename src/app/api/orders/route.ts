@@ -35,8 +35,16 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { customer_name, items, total, note, ticketCode: providedCode } = body
 
-    // Generate a random 4-digit code if not provided
-    const ticket_code = providedCode ?? Math.floor(1000 + Math.random() * 9000).toString()
+    // Generate sequential 4-digit ticket code (0000, 0001, 0002, ...)
+    let ticket_code: string
+    if (providedCode) {
+      ticket_code = providedCode
+    } else {
+      const { count } = await getSupabase()
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+      ticket_code = String(count ?? 0).padStart(4, '0')
+    }
 
     const { data, error } = await getSupabase()
       .from('orders')

@@ -1404,11 +1404,14 @@ export default function MenuPage() {
       : (parseFloat(tipOption) / 100) * subtotal
     const grandTotal = tipAmount
     const amount = grandTotal.toFixed(2)
-    const venmoNoteWithExtras = [
-      placedOrder.venmoNote,
-      tipAmount > 0 ? `$${tipAmount.toFixed(2)} tip` : null,
-    ].filter(Boolean).join(' + ')
-    const encodedNote = encodeURIComponent(venmoNoteWithExtras)
+    const itemNames = placedOrder.items.map(i => i.name).join(', ')
+    const tipLabel = !tipOption || tipOption === 'none'
+      ? 'No tip'
+      : tipOption === 'custom'
+        ? (customTipAmt > 0 ? `Tip: $${customTipAmt.toFixed(2)}` : 'No tip')
+        : `Tip: ${tipOption}%`
+    const venmoNoteFormatted = `Home Cafe #${placedOrder.ticketCode ?? '????'} | ${placedOrder.name} | ${itemNames} | ${tipLabel}`
+    const encodedNote = encodeURIComponent(venmoNoteFormatted)
     const deepLink = `venmo://paycharge?txn=pay&recipients=${venmoUsername}&amount=${amount}&note=${encodedNote}`
     const webLink = `https://venmo.com/${venmoUsername}?txn=pay&amount=${amount}&note=${encodedNote}`
 

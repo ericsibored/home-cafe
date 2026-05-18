@@ -129,7 +129,14 @@ export default function OrdersPage() {
           <div key={order.id} className="bg-white rounded-2xl p-5 shadow-sm">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="font-bold text-gray-900">{order.customer_name}</h3>
+                <div className="flex items-center gap-2">
+                  {order.ticket_code && (
+                    <span className="font-mono font-bold text-lg text-[#1e3a5f] tracking-widest">
+                      #{order.ticket_code}
+                    </span>
+                  )}
+                  <h3 className="font-bold text-gray-900">{order.customer_name}</h3>
+                </div>
                 <p className="text-xs text-gray-400">
                   {new Date(order.created_at).toLocaleTimeString([], {
                     hour: '2-digit',

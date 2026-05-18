@@ -27,5 +27,6 @@ export interface Order {
   total: number
   status: OrderStatus
   note?: string
+  ticket_code?: string
   created_at: string
 }
