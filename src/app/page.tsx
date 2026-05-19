@@ -1793,7 +1793,7 @@ export default function MenuPage() {
                           <div style={{ width: '100%', height: 220, overflow: 'hidden', flexShrink: 0 }}>
                             <img src={item.image} alt={item.name}
                               style={{ width: '100%', height: '100%', objectFit: 'cover',
-                                objectPosition: 'center center', display: 'block' }}
+                                objectPosition: 'center bottom', display: 'block' }}
                               onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
                           </div>
                         ) : (
