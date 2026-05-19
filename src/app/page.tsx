@@ -1785,89 +1785,90 @@ export default function MenuPage() {
                     return (
                       <div key={item.id}
                         style={{ background: C.card, borderRadius: 18, overflow: 'hidden',
-                          boxShadow: '0 2px 8px rgba(30,58,95,0.08)',
-                          cursor: 'pointer' }}
+                          boxShadow: '0 2px 12px rgba(30,58,95,0.09)',
+                          cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}>
-                        {/* Item photo */}
-                        {item.image && (
-                          <div style={{ width: '100%', height: 180, overflow: 'hidden' }}>
+                        {/* DoorDash-style photo — tall, full bleed */}
+                        {item.image ? (
+                          <div style={{ width: '100%', height: 220, overflow: 'hidden', flexShrink: 0 }}>
                             <img src={item.image} alt={item.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover',
+                                objectPosition: 'center center', display: 'block' }}
                               onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
                           </div>
-                        )}
-                        <div style={{ padding: 14 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                          {/* Emoji tile */}
-                          <div style={{ width: 48, height: 48, borderRadius: 14, background: C.peach,
+                        ) : (
+                          /* Emoji tile fallback when no photo */
+                          <div style={{ width: '100%', height: 100, background: C.peach,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 26, flexShrink: 0 }}>
+                            fontSize: 48, flexShrink: 0 }}>
                             {item.emoji}
                           </div>
-                          {/* Name / desc / meta */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 500, color: C.navy,
-                              lineHeight: 1.15, letterSpacing: -0.2 }}>{item.name}</div>
-                            <div style={{ fontFamily: SANS, fontSize: 12, color: C.ink2,
-                              marginTop: 3, lineHeight: 1.3 }}>{item.description}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8,
-                              marginTop: 8, flexWrap: 'wrap' }}>
-                              <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14,
-                                color: C.blueDeep }}>${item.price.toFixed(2)}</span>
-                              <Stars value={5} />
-                              {item.tempOptions && item.tempOptions.length > 1 && (
-                                <div onClick={e => e.stopPropagation()}>
-                                  <TempPill
-                                    value={itemTemp}
-                                    options={item.tempOptions as ('hot' | 'iced')[]}
-                                    onChange={t => setDrinkTemp(prev => ({ ...prev, [item.id]: t }))}
-                                  />
+                        )}
+                        {/* Info section */}
+                        <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                          {/* Name + Add button row */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.navy,
+                                lineHeight: 1.2, letterSpacing: -0.2 }}>{item.name}</div>
+                              <div style={{ fontFamily: SANS, fontSize: 12, color: C.ink2,
+                                marginTop: 3, lineHeight: 1.35 }}>{item.description}</div>
+                            </div>
+                            <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0, marginTop: 2 }}>
+                              <AddControl
+                                qty={qty}
+                                onAdd={() => updateQty(item.id, 1)}
+                                onRemove={() => updateQty(item.id, -1)}
+                              />
+                            </div>
+                          </div>
+                          {/* Price + temp + tags row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                            <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14,
+                              color: C.blueDeep }}>${item.price.toFixed(2)}</span>
+                            {item.tempOptions && item.tempOptions.length > 1 && (
+                              <div onClick={e => e.stopPropagation()}>
+                                <TempPill
+                                  value={itemTemp}
+                                  options={item.tempOptions as ('hot' | 'iced')[]}
+                                  onChange={t => setDrinkTemp(prev => ({ ...prev, [item.id]: t }))}
+                                />
+                              </div>
+                            )}
+                            {item.tempOptions?.length === 1 && item.tempOptions[0] === 'iced' && (
+                              <span style={{ fontFamily: SANS, fontSize: 10.5, padding: '2px 8px',
+                                borderRadius: 999, background: C.pale, color: C.navy, fontWeight: 600 }}>
+                                🧊 iced only
+                              </span>
+                            )}
+                          </div>
+                          {/* Expandable details */}
+                          {isExpanded && (
+                            <div style={{ marginTop: 8, paddingTop: 10,
+                              borderTop: `1px solid ${C.ruleSoft}`,
+                              display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {item.calories && (
+                                <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5, color: C.ink2 }}>
+                                  <span>🔥</span><span>{item.calories} cal</span>
                                 </div>
                               )}
-                              {item.tempOptions?.length === 1 && item.tempOptions[0] === 'iced' && (
-                                <span style={{ fontFamily: SANS, fontSize: 10.5, padding: '2px 8px',
-                                  borderRadius: 999, background: C.pale, color: C.navy, fontWeight: 600 }}>
-                                  🧊 iced only
-                                </span>
+                              {item.ingredients && item.ingredients.length > 0 && (
+                                <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5, color: C.ink2 }}>
+                                  <span>🌿</span><span>Ingredients: {item.ingredients.join(', ')}</span>
+                                </div>
                               )}
+                              <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5,
+                                color: item.allergens && item.allergens.length === 0 ? C.green : C.ink2 }}>
+                                <span>{item.allergens && item.allergens.length > 0 ? '⚠️' : '✅'}</span>
+                                <span>
+                                  {item.allergens && item.allergens.length > 0
+                                    ? `Allergens: ${item.allergens.join(', ')}`
+                                    : 'No common allergens'}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          {/* Add control */}
-                          <div onClick={e => e.stopPropagation()}>
-                            <AddControl
-                              qty={qty}
-                              onAdd={() => updateQty(item.id, 1)}
-                              onRemove={() => updateQty(item.id, -1)}
-                            />
-                          </div>
+                          )}
                         </div>
-                        {/* Expandable details */}
-                        {isExpanded && (
-                          <div style={{ marginTop: 12, paddingTop: 12,
-                            borderTop: `1px solid ${C.ruleSoft}`,
-                            display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {item.calories && (
-                              <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5, color: C.ink2 }}>
-                                <span>🔥</span><span>{item.calories} cal</span>
-                              </div>
-                            )}
-                            {item.ingredients && item.ingredients.length > 0 && (
-                              <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5, color: C.ink2 }}>
-                                <span>🌿</span><span>Ingredients: {item.ingredients.join(', ')}</span>
-                              </div>
-                            )}
-                            <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5,
-                              color: item.allergens && item.allergens.length === 0 ? C.green : C.ink2 }}>
-                              <span>{item.allergens && item.allergens.length > 0 ? '⚠️' : '✅'}</span>
-                              <span>
-                                {item.allergens && item.allergens.length > 0
-                                  ? `Allergens: ${item.allergens.join(', ')}`
-                                  : 'No common allergens'}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        </div>{/* end padding wrapper */}
                       </div>
                     )
                   })}
