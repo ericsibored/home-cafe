@@ -49,6 +49,7 @@ export const MENU: MenuItem[] = [
     allergens: ['soy'],
     ingredients: ['ceremonial matcha', 'lychee syrup', 'oat milk', 'rose water'],
     tempOptions: ['hot', 'iced'],
+    image: '/menu/lychee-matcha.jpg',
   },
   // Food
   {

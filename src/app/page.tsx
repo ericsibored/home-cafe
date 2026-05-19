@@ -1784,10 +1784,19 @@ export default function MenuPage() {
                     const itemTemp = getDrinkTemp(item)
                     return (
                       <div key={item.id}
-                        style={{ background: C.card, borderRadius: 18, padding: 14,
-                          boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 3px rgba(30,58,95,0.04)',
+                        style={{ background: C.card, borderRadius: 18, overflow: 'hidden',
+                          boxShadow: '0 2px 8px rgba(30,58,95,0.08)',
                           cursor: 'pointer' }}
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}>
+                        {/* Item photo */}
+                        {item.image && (
+                          <div style={{ width: '100%', height: 180, overflow: 'hidden' }}>
+                            <img src={item.image} alt={item.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
+                          </div>
+                        )}
+                        <div style={{ padding: 14 }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                           {/* Emoji tile */}
                           <div style={{ width: 48, height: 48, borderRadius: 14, background: C.peach,
@@ -1858,6 +1867,7 @@ export default function MenuPage() {
                             </div>
                           </div>
                         )}
+                        </div>{/* end padding wrapper */}
                       </div>
                     )
                   })}

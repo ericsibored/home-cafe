@@ -11,6 +11,7 @@ export interface MenuItem {
   allergens?: string[]
   ingredients?: string[]
   tempOptions?: ('hot' | 'iced')[]
+  image?: string
 }
 
 export interface OrderItem {
