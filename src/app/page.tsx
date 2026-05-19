@@ -1790,10 +1790,10 @@ export default function MenuPage() {
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}>
                         {/* DoorDash-style photo — tall, full bleed */}
                         {item.image ? (
-                          <div style={{ width: '100%', height: 220, overflow: 'hidden', flexShrink: 0 }}>
+                          <div style={{ width: '100%', height: 420, overflow: 'hidden', flexShrink: 0 }}>
                             <img src={item.image} alt={item.name}
                               style={{ width: '100%', height: '100%', objectFit: 'cover',
-                                objectPosition: 'center bottom', display: 'block' }}
+                                objectPosition: 'center 30%', display: 'block' }}
                               onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
                           </div>
                         ) : (
