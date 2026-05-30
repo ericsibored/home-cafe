@@ -38,6 +38,7 @@ export const MENU: MenuItem[] = [
     allergens: [],
     ingredients: ['ceremonial matcha', 'yuzu juice', 'sparkling water', 'honey'],
     tempOptions: ['iced'],
+    image: '/menu/matcha-yuzuade.jpg',
   },
   {
     id: 'lychee-matcha',
