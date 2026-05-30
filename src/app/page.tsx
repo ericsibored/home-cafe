@@ -1773,7 +1773,7 @@ export default function MenuPage() {
                     color: C.navy, letterSpacing: -0.4 }}>{category}</div>
                   <div style={{ flex: 1, height: 1, background: C.rule }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {MENU.filter(item =>
                     catFilter === 'all'
                       ? item.category === category
