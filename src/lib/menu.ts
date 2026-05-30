@@ -25,6 +25,7 @@ export const MENU: MenuItem[] = [
     allergens: ['soy'],
     ingredients: ['roasted hojicha', 'persimmon purée', 'oat milk', 'honey'],
     tempOptions: ['hot', 'iced'],
+    image: '/menu/hojicha-persimmon.jpg',
   },
   {
     id: 'matcha-cherry-spritz',
