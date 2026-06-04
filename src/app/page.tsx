@@ -1565,9 +1565,9 @@ export default function MenuPage() {
             <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 8,
               background: C.surface, padding: '10px 14px', borderRadius: 999,
               boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
-              <PulseDot color={C.amber} />
+              <PulseDot color={C.green} />
               <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: C.navy }}>
-                Awaiting payment
+                Order confirmed — making it now!
               </span>
             </div>
             {/* Steps */}
@@ -1731,30 +1731,62 @@ export default function MenuPage() {
             </button>
           </div>
 
-          {/* QR code */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginBottom: 10 }}>
-              📱 On your phone — scan to open Venmo
+          {/* Venmo — only show when there's a tip to pay */}
+          {grandTotal > 0 ? (
+            <>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginBottom: 10 }}>
+                  📱 On your phone — scan to open Venmo
+                </div>
+                <QRCodeSVG value={deepLink} size={140} />
+              </div>
+              <a href={webLink} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', background: C.venmo, borderRadius: 999, padding: '15px 22px',
+                  alignItems: 'center', justifyContent: 'center', gap: 10,
+                  color: '#fff', fontFamily: SANS, fontWeight: 700, fontSize: 16, textDecoration: 'none',
+                  boxShadow: '0 8px 24px rgba(61,149,206,0.35)' }}>
+                <span>Tip ${grandTotal.toFixed(2)} via</span>
+                <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 19 }}>venmo</span>
+                <span style={{ opacity: 0.85 }}>↗</span>
+              </a>
+              <div style={{ textAlign: 'center', fontFamily: SANS, fontSize: 11, color: C.ink2 }}>
+                Optional tip — opens Venmo
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '10px 0' }}>
+              <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink3 }}>
+                No payment needed — enjoy! 🎉
+              </p>
+              <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginTop: 4 }}>
+                Select a tip above if you&apos;d like to leave one
+              </p>
             </div>
-            <QRCodeSVG value={deepLink} size={140} />
-          </div>
-
-          {/* Venmo pay button */}
-          <a href={webLink} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', background: C.venmo, borderRadius: 999, padding: '15px 22px',
-              alignItems: 'center', justifyContent: 'center', gap: 10,
-              color: '#fff', fontFamily: SANS, fontWeight: 700, fontSize: 16, textDecoration: 'none',
-              boxShadow: '0 8px 24px rgba(61,149,206,0.35)' }}>
-            <span>Pay ${grandTotal.toFixed(2)} with</span>
-            <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 19 }}>venmo</span>
-            <span style={{ opacity: 0.85 }}>↗</span>
-          </a>
-          <div style={{ textAlign: 'center', fontFamily: SANS, fontSize: 11, color: C.ink2 }}>
-            Opens Venmo · returns with your ticket
-          </div>
+          )}
         </div>
       </main>
     )
+  }
+
+  // ── Ticket lookup state ───────────────────────────────────────────────────
+  const [showTicketLookup, setShowTicketLookup] = useState(false)
+  const [ticketLookupName, setTicketLookupName] = useState('')
+  const [ticketLookupResults, setTicketLookupResults] = useState<{ticket_code: string; customer_name: string; created_at: string}[] | null>(null)
+  const [ticketLookupLoading, setTicketLookupLoading] = useState(false)
+
+  const lookupTicketByName = async () => {
+    if (!ticketLookupName.trim()) return
+    setTicketLookupLoading(true)
+    setTicketLookupResults(null)
+    try {
+      const res = await fetch(`/api/orders?name=${encodeURIComponent(ticketLookupName.trim())}`)
+      const data = await res.json()
+      setTicketLookupResults(Array.isArray(data) ? data : [])
+    } catch {
+      setTicketLookupResults([])
+    } finally {
+      setTicketLookupLoading(false)
+    }
   }
 
   // ── Menu screen ───────────────────────────────────────────────────────────
@@ -1798,19 +1830,96 @@ export default function MenuPage() {
           <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, marginTop: 8, lineHeight: 1.5 }}>
             Bringing the café experience home. Thanks for being one of our first official tasters.
           </p>
-          <button onClick={() => setShowReviews(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10,
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <Stars value={reviewAvg ? Math.round(reviewAvg) : 5} size={14} />
-            <span style={{ fontFamily: SANS, fontSize: 12, color: C.midBlue,
-              textDecoration: 'underline', textDecorationColor: C.rule, textUnderlineOffset: 3 }}>
-              {reviews.length > 0
-                ? `${reviewAvg!.toFixed(1)} · ${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`
-                : 'Write a Review'} ›
-            </span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
+            <button onClick={() => setShowReviews(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              <Stars value={reviewAvg ? Math.round(reviewAvg) : 5} size={14} />
+              <span style={{ fontFamily: SANS, fontSize: 12, color: C.midBlue,
+                textDecoration: 'underline', textDecorationColor: C.rule, textUnderlineOffset: 3 }}>
+                {reviews.length > 0
+                  ? `${reviewAvg!.toFixed(1)} · ${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`
+                  : 'Write a Review'} ›
+              </span>
+            </button>
+            <button onClick={() => setShowTicketLookup(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontFamily: SANS, fontSize: 12, color: C.midBlue,
+                textDecoration: 'underline', textDecorationColor: C.rule, textUnderlineOffset: 3 }}>
+              🎫 Find my ticket ›
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Ticket lookup modal */}
+      {showTicketLookup && (
+        <div onClick={e => { if (e.target === e.currentTarget) setShowTicketLookup(false) }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+          <div className="bg-white w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: C.navy }}>
+                Find my ticket
+              </h2>
+              <button onClick={() => setShowTicketLookup(false)}
+                style={{ width: 32, height: 32, borderRadius: 999, background: C.pale,
+                  border: 'none', cursor: 'pointer', fontSize: 14, color: C.midBlue }}>✕</button>
+            </div>
+            <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, marginBottom: 14 }}>
+              Enter your first name to find your order number.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="Your first name"
+                value={ticketLookupName}
+                onChange={e => setTicketLookupName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && lookupTicketByName()}
+                style={{ flex: 1, border: `1px solid ${C.rule}`, borderRadius: 12,
+                  padding: '10px 14px', fontFamily: SANS, fontSize: 14,
+                  outline: 'none', background: C.card }}
+              />
+              <button onClick={lookupTicketByName}
+                disabled={ticketLookupLoading || !ticketLookupName.trim()}
+                style={{ padding: '0 16px', borderRadius: 12, background: C.blue,
+                  border: 'none', fontFamily: SANS, fontSize: 13, fontWeight: 600,
+                  color: C.navy, cursor: 'pointer',
+                  opacity: ticketLookupLoading || !ticketLookupName.trim() ? 0.4 : 1 }}>
+                {ticketLookupLoading ? '…' : 'Search'}
+              </button>
+            </div>
+            {ticketLookupResults !== null && (
+              <div style={{ marginTop: 16 }}>
+                {ticketLookupResults.length === 0 ? (
+                  <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink3, textAlign: 'center', padding: '12px 0' }}>
+                    No orders found for that name.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {ticketLookupResults.map(r => (
+                      <div key={r.ticket_code} style={{ background: C.pale, borderRadius: 14,
+                        padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: C.navy }}>
+                            {r.customer_name}
+                          </div>
+                          <div style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginTop: 2 }}>
+                            {formatDate(r.created_at)}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: MONO, fontSize: 22, fontWeight: 700,
+                          color: C.navy, letterSpacing: 3 }}>
+                          #{r.ticket_code}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tabs: Menu / Play Beli / Collage */}
       <div style={{ display: 'flex', padding: '4px 18px 0', borderBottom: `1px solid ${C.rule}`, marginTop: 12, overflowX: 'auto' }}>

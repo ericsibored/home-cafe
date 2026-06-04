@@ -17,6 +17,20 @@ export async function GET(request: Request) {
       return Response.json(data)
     }
 
+    // Name lookup: GET /api/orders?name=Eric
+    const name = searchParams.get('name')
+    if (name) {
+      const { data, error } = await getSupabase()
+        .from('orders')
+        .select('ticket_code, customer_name, created_at')
+        .ilike('customer_name', `%${name.trim()}%`)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (error) return Response.json({ error: error.message }, { status: 500 })
+      return Response.json(data ?? [])
+    }
+
     // Staff view: return all orders
     const { data, error } = await getSupabase()
       .from('orders')
