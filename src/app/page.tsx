@@ -868,6 +868,105 @@ function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
   )
 }
 
+// ── Collage download helpers ──────────────────────────────────────────────────
+async function downloadPhoto(url: string, name: string) {
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `${name.replace(/\s+/g, '-').toLowerCase()}-selfie.jpg`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch {
+    window.open(url, '_blank')
+  }
+}
+
+async function downloadCollage(entries: CollageEntry[]) {
+  const COLS = 3
+  const CELL = 320        // px per cell (square photo area)
+  const PAD = 16          // polaroid side/top padding
+  const BOTTOM = 60       // polaroid bottom label area
+  const GAP = 24
+  const ROWS = Math.ceil(entries.length / COLS)
+  const W = COLS * (CELL + PAD * 2 + GAP) - GAP + GAP * 2
+  const H = ROWS * (CELL + PAD + BOTTOM + GAP) - GAP + GAP * 2
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#f6e7d7'
+  ctx.fillRect(0, 0, W, H)
+
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((res, rej) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => res(img)
+      img.onerror = rej
+      img.src = src
+    })
+
+  for (let i = 0; i < entries.length; i++) {
+    const col = i % COLS
+    const row = Math.floor(i / COLS)
+    const x = GAP + col * (CELL + PAD * 2 + GAP)
+    const y = GAP + row * (CELL + PAD + BOTTOM + GAP)
+
+    // Polaroid card background
+    ctx.fillStyle = '#ffffff'
+    ctx.shadowColor = 'rgba(30,58,95,0.15)'
+    ctx.shadowBlur = 12
+    ctx.fillRect(x, y, CELL + PAD * 2, CELL + PAD + BOTTOM)
+    ctx.shadowBlur = 0
+
+    // Photo
+    try {
+      const img = await loadImage(entries[i].photo_url)
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(x + PAD, y + PAD, CELL, CELL)
+      ctx.clip()
+      // cover-fit
+      const scale = Math.max(CELL / img.width, CELL / img.height)
+      const dw = img.width * scale
+      const dh = img.height * scale
+      ctx.drawImage(img, x + PAD + (CELL - dw) / 2, y + PAD + (CELL - dh) / 2, dw, dh)
+      ctx.restore()
+    } catch { /* skip failed images */ }
+
+    // Name label
+    ctx.fillStyle = '#1e3a5f'
+    ctx.font = `bold 14px Georgia, serif`
+    ctx.textAlign = 'center'
+    ctx.fillText(entries[i].guest_name, x + PAD + CELL / 2, y + PAD + CELL + 24)
+
+    // Note
+    if (entries[i].note) {
+      ctx.fillStyle = 'rgba(30,58,95,0.6)'
+      ctx.font = `italic 11px system-ui, sans-serif`
+      ctx.fillText(`"${entries[i].note}"`, x + PAD + CELL / 2, y + PAD + CELL + 42, CELL)
+    }
+  }
+
+  // Title at top-right corner
+  ctx.fillStyle = 'rgba(30,58,95,0.35)'
+  ctx.font = `italic 13px Georgia, serif`
+  ctx.textAlign = 'right'
+  ctx.fillText('Lazy Orchard · Guest Wall', W - GAP, GAP - 6)
+
+  canvas.toBlob(blob => {
+    if (!blob) return
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'lazy-orchard-collage.png'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }, 'image/png')
+}
+
 // ── Collage Tab ───────────────────────────────────────────────────────────────
 type CameraPhase = 'idle' | 'live' | 'captured'
 
@@ -1177,15 +1276,24 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
       </div>
 
       {/* ── Guest Wall heading ── */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
         <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: C.navy }}>
           Guest Wall
         </div>
         <div style={{ flex: 1, height: 1, background: C.rule }} />
         {entries.length > 0 && (
-          <span style={{ fontFamily: SANS, fontSize: 11, color: C.ink3 }}>
-            {entries.length} {entries.length === 1 ? 'photo' : 'photos'}
-          </span>
+          <>
+            <span style={{ fontFamily: SANS, fontSize: 11, color: C.ink3 }}>
+              {entries.length} {entries.length === 1 ? 'photo' : 'photos'}
+            </span>
+            <button
+              onClick={() => downloadCollage(entries)}
+              style={{ padding: '5px 12px', borderRadius: 999, border: `1px solid ${C.rule}`,
+                background: C.card, fontFamily: SANS, fontSize: 11, fontWeight: 600,
+                color: C.midBlue, cursor: 'pointer', flexShrink: 0 }}>
+              ⬇ Download all
+            </button>
+          </>
         )}
       </div>
 
@@ -1219,12 +1327,25 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
               boxShadow: '0 4px 18px rgba(30,58,95,0.13)',
               transform: ROTATIONS[i % ROTATIONS.length],
               transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              position: 'relative',
             }}>
               <img
                 src={entry.photo_url}
                 alt={`${entry.guest_name}'s selfie`}
                 style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
               />
+              {/* Individual download button */}
+              <button
+                onClick={() => downloadPhoto(entry.photo_url, entry.guest_name)}
+                title="Download photo"
+                style={{ position: 'absolute', top: 14, right: 14,
+                  width: 26, height: 26, borderRadius: 999,
+                  background: 'rgba(255,255,255,0.85)', border: 'none',
+                  cursor: 'pointer', fontSize: 12, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
+                ⬇
+              </button>
               <div style={{ marginTop: 10, textAlign: 'center' }}>
                 <p style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 14, color: C.navy,
                   lineHeight: 1.2 }}>
