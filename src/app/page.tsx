@@ -1273,7 +1273,7 @@ export default function MenuPage() {
   // ── Post-order collage flow ────────────────────────────────────────────────
   const [cameFromOrder, setCameFromOrder] = useState(false)
   const [orderGuestName, setOrderGuestName] = useState('')
-  const [collageCta, setCollageCta] = useState<number | null>(null)
+  // collageCta removed — collage nav is opt-in only
 
   useEffect(() => {
     try {
@@ -1304,31 +1304,7 @@ export default function MenuPage() {
     }
   }, [tab])
 
-  // Start collage CTA countdown when order is placed
-  useEffect(() => {
-    if (!placedOrder) { setCollageCta(null); return }
-    setCollageCta(4)
-  }, [placedOrder?.id])
-
-  // Tick countdown down
-  useEffect(() => {
-    if (collageCta === null || collageCta <= 0) return
-    const t = setTimeout(() => setCollageCta(c => (c ?? 1) - 1), 1000)
-    return () => clearTimeout(t)
-  }, [collageCta])
-
-  // Navigate to collage when countdown hits 0
-  useEffect(() => {
-    if (collageCta !== 0 || !placedOrder) return
-    setCameFromOrder(true)
-    setOrderGuestName(placedOrder.name)
-    setPlacedOrder(null)
-    setTipOption(null)
-    setCustomTipStr('')
-    setTab('collage')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collageCta])
+  // No auto-navigation — collage is opt-in via button only
 
   const rate = (itemId: string, stars: number) => {
     const next = { ...ratings, [itemId]: stars }
@@ -1617,7 +1593,6 @@ export default function MenuPage() {
             </p>
             <button
               onClick={() => {
-                setCollageCta(null)
                 setCameFromOrder(true)
                 setOrderGuestName(placedOrder.name)
                 setPlacedOrder(null)
@@ -1632,16 +1607,6 @@ export default function MenuPage() {
                 color: C.peach, cursor: 'pointer',
                 boxShadow: '0 6px 20px rgba(30,58,95,0.22)' }}>
               📸 Add yourself to the collage
-              {collageCta !== null && collageCta > 0 && (
-                <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 13, opacity: 0.75 }}>
-                  ({collageCta}s)
-                </span>
-              )}
-            </button>
-            <button onClick={() => setCollageCta(null)}
-              style={{ marginTop: 10, background: 'none', border: 'none',
-                cursor: 'pointer', fontFamily: SANS, fontSize: 12, color: C.ink3 }}>
-              Skip for now
             </button>
           </div>
 
