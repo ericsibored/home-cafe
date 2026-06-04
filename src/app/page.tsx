@@ -1489,6 +1489,27 @@ export default function MenuPage() {
 
   const venmoUsername = process.env.NEXT_PUBLIC_VENMO_USERNAME ?? 'your-venmo'
 
+  // ── Ticket lookup state (must be before any conditional return) ───────────
+  const [showTicketLookup, setShowTicketLookup] = useState(false)
+  const [ticketLookupName, setTicketLookupName] = useState('')
+  const [ticketLookupResults, setTicketLookupResults] = useState<{ticket_code: string; customer_name: string; created_at: string}[] | null>(null)
+  const [ticketLookupLoading, setTicketLookupLoading] = useState(false)
+
+  const lookupTicketByName = async () => {
+    if (!ticketLookupName.trim()) return
+    setTicketLookupLoading(true)
+    setTicketLookupResults(null)
+    try {
+      const res = await fetch(`/api/orders?name=${encodeURIComponent(ticketLookupName.trim())}`)
+      const data = await res.json()
+      setTicketLookupResults(Array.isArray(data) ? data : [])
+    } catch {
+      setTicketLookupResults([])
+    } finally {
+      setTicketLookupLoading(false)
+    }
+  }
+
   // ── Order / Ticket screen ─────────────────────────────────────────────────
   if (placedOrder) {
     const subtotal = placedOrder.total
@@ -1766,27 +1787,6 @@ export default function MenuPage() {
         </div>
       </main>
     )
-  }
-
-  // ── Ticket lookup state ───────────────────────────────────────────────────
-  const [showTicketLookup, setShowTicketLookup] = useState(false)
-  const [ticketLookupName, setTicketLookupName] = useState('')
-  const [ticketLookupResults, setTicketLookupResults] = useState<{ticket_code: string; customer_name: string; created_at: string}[] | null>(null)
-  const [ticketLookupLoading, setTicketLookupLoading] = useState(false)
-
-  const lookupTicketByName = async () => {
-    if (!ticketLookupName.trim()) return
-    setTicketLookupLoading(true)
-    setTicketLookupResults(null)
-    try {
-      const res = await fetch(`/api/orders?name=${encodeURIComponent(ticketLookupName.trim())}`)
-      const data = await res.json()
-      setTicketLookupResults(Array.isArray(data) ? data : [])
-    } catch {
-      setTicketLookupResults([])
-    } finally {
-      setTicketLookupLoading(false)
-    }
   }
 
   // ── Menu screen ───────────────────────────────────────────────────────────
