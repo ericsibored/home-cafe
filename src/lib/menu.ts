@@ -5,7 +5,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'banana-milk-coffee',
     name: 'Banana Milk Coffee Latte',
-    description: 'Espresso, banana milk, caramel',
+    description: 'Espresso and banana milk latte with a drizzle of caramel',
     price: 4.00,
     category: 'Drinks',
     emoji: '🍌',
@@ -17,7 +17,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'hojicha-persimmon',
     name: 'Hojicha Persimmon Latte',
-    description: 'Roasted hojicha, persimmon purée, oat milk',
+    description: 'Roasted hojicha latte with persimmon purée and oat milk',
     price: 4.00,
     category: 'Drinks',
     emoji: '🍂',
@@ -30,7 +30,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'matcha-yuzuade',
     name: 'Matcha Yuzuade',
-    description: 'Ceremonial matcha, yuzu, sparkling water',
+    description: 'Ceremonial matcha with bright yuzu and sparkling water',
     price: 4.00,
     category: 'Drinks',
     emoji: '🍋',
@@ -43,13 +43,13 @@ export const MENU: MenuItem[] = [
   {
     id: 'lychee-matcha',
     name: 'Matcha Latte w/ Lychee Whipped Cream',
-    description: 'Ceremonial matcha, oat milk, lychee whipped cream',
+    description: 'Smooth ceremonial matcha latte topped with airy lychee whipped cream',
     price: 4.00,
     category: 'Drinks',
     emoji: '🌸',
-    calories: 160,
+    calories: 170,
     allergens: ['soy', 'dairy'],
-    ingredients: ['ceremonial matcha', 'oat milk', 'lychee whipped cream'],
+    ingredients: ['ceremonial matcha', 'oat milk', 'heavy cream', 'lychee juice'],
     tempOptions: ['hot', 'iced'],
     image: '/menu/lychee-matcha.jpg',
   },
@@ -57,7 +57,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'scallion-pancake-croissant',
     name: 'Scallion Pancake Croissant',
-    description: 'Flaky croissant layered with scallion pancake',
+    description: 'Flaky croissant layered with savory scallion pancake',
     price: 2.50,
     category: 'Food',
     emoji: '🥐',
@@ -68,7 +68,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'jasmine-grape-cake',
     name: 'Jasmine Green Grape Cream Cake',
-    description: 'Jasmine sponge, green grape, diplomat cream',
+    description: 'Jasmine tea sponge layered with green grapes and diplomat cream',
     price: 2.50,
     category: 'Food',
     emoji: '🍰',
@@ -79,7 +79,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'strawberry-earl-grey-cookies',
     name: 'Strawberry & Earl Grey Cookies',
-    description: 'Buttery shortbread, earl grey, strawberry jam',
+    description: 'Buttery shortbread with earl grey and a swirl of strawberry jam',
     price: 2.50,
     category: 'Food',
     emoji: '🍓',
@@ -90,7 +90,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'black-sesame-coconut-cookies',
     name: 'Black Sesame Coconut Cookies',
-    description: 'Toasted black sesame, coconut flakes',
+    description: 'Crispy cookies with toasted black sesame and coconut flakes',
     price: 2.50,
     category: 'Food',
     emoji: '🍪',
