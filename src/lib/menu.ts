@@ -40,6 +40,7 @@ export const MENU: MenuItem[] = [
     ingredients: ['ceremonial matcha', 'yuzu juice', 'sparkling water', 'honey'],
     tempOptions: ['iced'],
     image: '/menu/matcha-yuzuade.jpg',
+    addOns: ['matcha'],
   },
   {
     id: 'lychee-matcha',
