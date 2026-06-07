@@ -12,7 +12,8 @@ export const MENU: MenuItem[] = [
     calories: 180,
     allergens: ['dairy', 'soy'],
     ingredients: ['espresso', 'banana milk', 'caramel syrup', 'oat milk'],
-    tempOptions: ['hot', 'iced'],
+    tempOptions: ['iced'],
+    image: '/menu/banana-latte.jpg',
   },
   {
     id: 'hojicha-persimmon',
@@ -24,7 +25,7 @@ export const MENU: MenuItem[] = [
     calories: 150,
     allergens: ['soy'],
     ingredients: ['roasted hojicha', 'persimmon purée', 'oat milk', 'honey'],
-    tempOptions: ['hot', 'iced'],
+    tempOptions: ['iced'],
     image: '/menu/hojicha-persimmon.jpg',
   },
   {
@@ -52,6 +53,20 @@ export const MENU: MenuItem[] = [
     ingredients: ['ceremonial matcha', 'oat milk', 'heavy cream', 'lychee juice'],
     tempOptions: ['hot', 'iced'],
     image: '/menu/lychee-matcha.jpg',
+  },
+  {
+    id: 'coffee-latte',
+    name: 'Coffee Latte',
+    description: 'Classic espresso latte, rich and smooth',
+    price: 4.00,
+    category: 'Drinks',
+    emoji: '☕',
+    calories: 140,
+    allergens: ['dairy', 'soy'],
+    ingredients: ['espresso', 'oat milk'],
+    tempOptions: ['hot'],
+    image: '/menu/coffee-latte.jpg',
+    addOns: ['strawberry'],
   },
   // Food
   {

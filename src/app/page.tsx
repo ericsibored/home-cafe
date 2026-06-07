@@ -1386,6 +1386,14 @@ export default function MenuPage() {
   const [drinkTemp, setDrinkTemp] = useState<Record<string, 'hot' | 'iced'>>({})
   const getDrinkTemp = (item: { id: string; tempOptions?: ('hot' | 'iced')[] }) =>
     drinkTemp[item.id] ?? (item.tempOptions?.[0] ?? 'hot')
+  const [itemAddOns, setItemAddOns] = useState<Record<string, string[]>>({})
+  const toggleAddOn = (itemId: string, addOn: string) => {
+    setItemAddOns(prev => {
+      const current = prev[itemId] ?? []
+      const next = current.includes(addOn) ? current.filter(a => a !== addOn) : [...current, addOn]
+      return { ...prev, [itemId]: next }
+    })
+  }
 
   const [showReviews, setShowReviews] = useState(false)
   const [reviews, setReviews] = useState<Review[]>([])
@@ -1446,12 +1454,15 @@ export default function MenuPage() {
 
   const cartItems: OrderItem[] = MENU
     .filter(item => cart.has(item.id))
-    .map(item => ({
-      id: item.id,
-      name: item.name,
-      quantity: cart.get(item.id)!,
-      price: item.price,
-    }))
+    .map(item => {
+      const addOns = itemAddOns[item.id] ?? []
+      return {
+        id: item.id,
+        name: addOns.length > 0 ? `${item.name} + ${addOns.join(', ')}` : item.name,
+        quantity: cart.get(item.id)!,
+        price: item.price,
+      }
+    })
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -2036,6 +2047,30 @@ export default function MenuPage() {
                                 borderRadius: 999, background: C.pale, color: C.navy, fontWeight: 600 }}>
                                 🧊 iced only
                               </span>
+                            )}
+                            {item.tempOptions?.length === 1 && item.tempOptions[0] === 'hot' && (
+                              <span style={{ fontFamily: SANS, fontSize: 10.5, padding: '2px 8px',
+                                borderRadius: 999, background: C.pale, color: C.navy, fontWeight: 600 }}>
+                                ☕ hot only
+                              </span>
+                            )}
+                            {item.addOns && item.addOns.length > 0 && (
+                              <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                {item.addOns.map(addOn => {
+                                  const isSelected = (itemAddOns[item.id] ?? []).includes(addOn)
+                                  return (
+                                    <button key={addOn} onClick={() => toggleAddOn(item.id, addOn)} style={{
+                                      fontFamily: SANS, fontSize: 10.5, padding: '2px 8px',
+                                      borderRadius: 999,
+                                      background: isSelected ? C.blue : C.pale,
+                                      color: isSelected ? C.navy : C.ink2,
+                                      border: 'none', cursor: 'pointer', fontWeight: 600,
+                                    }}>
+                                      + {addOn}
+                                    </button>
+                                  )
+                                })}
+                              </div>
                             )}
                           </div>
                           {/* Expandable details */}
