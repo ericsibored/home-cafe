@@ -67,7 +67,7 @@ export const MENU: MenuItem[] = [
     ingredients: ['espresso', 'oat milk'],
     tempOptions: ['hot'],
     image: '/menu/coffee-latte.jpeg',
-    imagePosition: 'center 40%',
+    imagePosition: 'center 50%',
     addOns: ['strawberry'],
   },
   // Food
@@ -93,7 +93,7 @@ export const MENU: MenuItem[] = [
     allergens: ['gluten', 'eggs', 'dairy'],
     ingredients: ['jasmine sponge cake', 'green grapes', 'diplomat cream', 'heavy cream', 'jasmine tea'],
     image: '/menu/grape-cake.jpeg',
-    imagePosition: 'center 50%',
+    imagePosition: 'center 65%',
   },
   {
     id: 'strawberry-earl-grey-cookies',
@@ -106,7 +106,7 @@ export const MENU: MenuItem[] = [
     allergens: ['gluten', 'dairy'],
     ingredients: ['butter', 'all-purpose flour', 'earl grey tea', 'strawberry jam', 'powdered sugar'],
     image: '/menu/strawberry-earlgrey.jpeg',
-    imagePosition: 'center 50%',
+    imagePosition: 'center 60%',
   },
   {
     id: 'black-sesame-coconut-cookies',
