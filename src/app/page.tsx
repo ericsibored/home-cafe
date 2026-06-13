@@ -32,7 +32,7 @@ const SERIF = 'var(--font-newsreader), Georgia, serif'
 const SANS  = 'var(--font-geist-sans), system-ui, sans-serif'
 const MONO  = 'var(--font-geist-mono), monospace'
 
-const VERSION = '0.09'
+const VERSION = '0.10'
 const EVENT_END = new Date(2026, 5, 15) // midnight June 15 local = end of June 14
 const BETA_CUTOFF = '2026-06-13T04:00:00.000Z' // entries before this = Beta Testing
 const isLocked = new Date() >= EVENT_END
@@ -180,6 +180,17 @@ function AddControl({ qty, onAdd, onRemove }: { qty: number; onAdd: () => void; 
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+function sanitize(s: string): string {
+  return s.trim().replace(/[<>&"'\\]/g, '')
+}
+
+function cartKey(item: MenuItem, temp?: string, milk?: string): string {
+  const parts: string[] = [item.id]
+  if (item.tempOptions?.length) parts.push(temp ?? item.tempOptions[0])
+  if (item.milkOptions?.length) parts.push(milk ?? item.milkOptions[0])
+  return parts.join('|')
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -1121,8 +1132,8 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           photoBase64: capturedImage,
-          note: noteText.trim() || null,
-          guestName: guestName.trim(),
+          note: sanitize(noteText) || null,
+          guestName: sanitize(guestName),
         }),
       })
       const body = await res.json()
@@ -1298,6 +1309,7 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
               <input
                 type="text"
                 placeholder="Your first name *"
+                maxLength={40}
                 value={guestName}
                 onChange={e => setGuestName(e.target.value)}
                 style={{ border: `1px solid ${C.rule}`, borderRadius: 12,
@@ -1308,6 +1320,7 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
               <input
                 type="text"
                 placeholder="Add a little message… (optional)"
+                maxLength={80}
                 value={noteText}
                 onChange={e => setNoteText(e.target.value)}
                 style={{ border: `1px solid ${C.rule}`, borderRadius: 12,
@@ -1487,6 +1500,9 @@ export default function MenuPage() {
   const [drinkTemp, setDrinkTemp] = useState<Record<string, 'hot' | 'iced'>>({})
   const getDrinkTemp = (item: { id: string; tempOptions?: ('hot' | 'iced')[] }) =>
     drinkTemp[item.id] ?? (item.tempOptions?.[0] ?? 'hot')
+  const [itemMilk, setItemMilk] = useState<Record<string, string>>({})
+  const getItemMilk = (item: MenuItem): string | undefined =>
+    item.milkOptions?.length ? (itemMilk[item.id] ?? item.milkOptions[0]) : undefined
   const [itemAddOns, setItemAddOns] = useState<Record<string, string[]>>({})
   const toggleAddOn = (itemId: string, addOn: string) => {
     setItemAddOns(prev => {
@@ -1543,27 +1559,32 @@ export default function MenuPage() {
   }
   void rate // used in future star-rating UI
 
-  const updateQty = (itemId: string, delta: number) => {
+  const updateQty = (key: string, delta: number) => {
     setCart(prev => {
       const next = new Map(prev)
-      const updated = (next.get(itemId) ?? 0) + delta
-      if (updated <= 0) next.delete(itemId)
-      else next.set(itemId, updated)
+      const updated = (next.get(key) ?? 0) + delta
+      if (updated <= 0) next.delete(key)
+      else next.set(key, updated)
       return next
     })
   }
 
-  const cartItems: OrderItem[] = MENU
-    .filter(item => cart.has(item.id))
-    .map(item => {
-      const addOns = itemAddOns[item.id] ?? []
-      return {
-        id: item.id,
-        name: addOns.length > 0 ? `${item.name} + ${addOns.join(', ')}` : item.name,
-        quantity: cart.get(item.id)!,
-        price: item.price,
-      }
-    })
+  const cartItems: OrderItem[] = Array.from(cart.entries()).map(([key, qty]) => {
+    const [itemId, ...rest] = key.split('|')
+    const menuItem = MENU.find(m => m.id === itemId)!
+    let ri = 0
+    const variants: string[] = []
+    if (menuItem.tempOptions?.length && rest[ri] !== undefined) variants.push(rest[ri++])
+    if (menuItem.milkOptions?.length && rest[ri] !== undefined) variants.push(rest[ri++])
+    const addOns = itemAddOns[itemId] ?? []
+    const all = [...variants, ...addOns]
+    return {
+      id: key,
+      name: all.length > 0 ? `${menuItem.name} (${all.join(', ')})` : menuItem.name,
+      quantity: qty,
+      price: menuItem.price,
+    }
+  })
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -1576,7 +1597,7 @@ export default function MenuPage() {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer_name: customerName.trim(), items: cartItems, total, note }),
+        body: JSON.stringify({ customer_name: sanitize(customerName), items: cartItems, total, note: sanitize(note) }),
       })
       const text = await res.text()
       const body = text ? JSON.parse(text) : {}
@@ -1604,7 +1625,7 @@ export default function MenuPage() {
   // ── Ticket lookup state (must be before any conditional return) ───────────
   const [showTicketLookup, setShowTicketLookup] = useState(false)
   const [ticketLookupName, setTicketLookupName] = useState('')
-  const [ticketLookupResults, setTicketLookupResults] = useState<{ticket_code: string; customer_name: string; created_at: string}[] | null>(null)
+  const [ticketLookupResults, setTicketLookupResults] = useState<{ticket_code: string; customer_name: string; created_at: string; items?: OrderItem[]}[] | null>(null)
   const [ticketLookupLoading, setTicketLookupLoading] = useState(false)
 
   const lookupTicketByName = async () => {
@@ -1871,7 +1892,9 @@ export default function MenuPage() {
                 <div style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginBottom: 10 }}>
                   📱 On your phone — scan to open Venmo
                 </div>
-                <QRCodeSVG value={deepLink} size={140} />
+                <a href={deepLink} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', lineHeight: 0 }}>
+                  <QRCodeSVG value={deepLink} size={140} />
+                </a>
               </div>
               <a href={webLink} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'flex', background: C.venmo, borderRadius: 999, padding: '15px 22px',
@@ -1896,6 +1919,14 @@ export default function MenuPage() {
               </p>
             </div>
           )}
+          <button
+            onClick={() => { setPlacedOrder(null); setTipOption(null); setCustomTipStr('') }}
+            style={{ width: '100%', padding: '14px 0', borderRadius: 999,
+              border: `1px solid ${C.rule}`, background: 'transparent',
+              fontFamily: SANS, fontSize: 15, fontWeight: 600,
+              color: C.navy, cursor: 'pointer', marginTop: 8 }}>
+            ← Back to menu
+          </button>
         </div>
       </main>
     )
@@ -2014,20 +2045,32 @@ export default function MenuPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {ticketLookupResults.map(r => (
-                      <div key={r.ticket_code} style={{ background: C.pale, borderRadius: 14,
-                        padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: C.navy }}>
-                            {r.customer_name}
+                      <div key={r.ticket_code} style={{ background: C.pale, borderRadius: 14, padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: C.navy }}>
+                              {r.customer_name}
+                            </div>
+                            <div style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginTop: 2 }}>
+                              {formatDate(r.created_at)}
+                            </div>
                           </div>
-                          <div style={{ fontFamily: SANS, fontSize: 11, color: C.ink3, marginTop: 2 }}>
-                            {formatDate(r.created_at)}
+                          <div style={{ fontFamily: MONO, fontSize: 22, fontWeight: 700,
+                            color: C.navy, letterSpacing: 3 }}>
+                            #{r.ticket_code}
                           </div>
                         </div>
-                        <div style={{ fontFamily: MONO, fontSize: 22, fontWeight: 700,
-                          color: C.navy, letterSpacing: 3 }}>
-                          #{r.ticket_code}
-                        </div>
+                        {r.items && r.items.length > 0 && (
+                          <ul style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.rule}`,
+                            listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            {r.items.map((item, i) => (
+                              <li key={i} style={{ fontFamily: SANS, fontSize: 12, color: C.ink2,
+                                display: 'flex', justifyContent: 'space-between' }}>
+                                <span><span style={{ fontWeight: 600 }}>{item.quantity}×</span> {item.name}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2091,9 +2134,11 @@ export default function MenuPage() {
                       ? item.category === category
                       : item.category.toLowerCase() === catFilter
                   ).map(item => {
-                    const qty = cart.get(item.id) ?? 0
-                    const isExpanded = expandedItem === item.id
                     const itemTemp = getDrinkTemp(item)
+                    const milk = getItemMilk(item)
+                    const key = cartKey(item, itemTemp, milk)
+                    const qty = cart.get(key) ?? 0
+                    const isExpanded = expandedItem === item.id
                     return (
                       <div key={item.id}
                         style={{ background: C.card, borderRadius: 18, overflow: 'hidden',
@@ -2130,8 +2175,8 @@ export default function MenuPage() {
                             <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0, marginTop: 2 }}>
                               <AddControl
                                 qty={qty}
-                                onAdd={() => updateQty(item.id, 1)}
-                                onRemove={() => updateQty(item.id, -1)}
+                                onAdd={() => updateQty(key, 1)}
+                                onRemove={() => updateQty(key, -1)}
                               />
                             </div>
                           </div>
@@ -2161,6 +2206,24 @@ export default function MenuPage() {
                                 borderRadius: 999, background: C.pale, color: C.navy, fontWeight: 600 }}>
                                 ☕ hot only
                               </span>
+                            )}
+                            {item.milkOptions && item.milkOptions.length > 0 && (
+                              <div onClick={e => e.stopPropagation()}
+                                style={{ display: 'inline-flex', background: C.pale, borderRadius: 999, padding: 3 }}>
+                                {item.milkOptions.map(m => (
+                                  <button key={m}
+                                    onClick={() => setItemMilk(prev => ({ ...prev, [item.id]: m }))}
+                                    style={{
+                                      padding: '3px 9px', borderRadius: 999, fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
+                                      color: (itemMilk[item.id] ?? item.milkOptions![0]) === m ? C.navy : C.midBlue,
+                                      background: (itemMilk[item.id] ?? item.milkOptions![0]) === m ? C.card : 'transparent',
+                                      border: 'none', cursor: 'pointer',
+                                      boxShadow: (itemMilk[item.id] ?? item.milkOptions![0]) === m ? '0 1px 2px rgba(30,58,95,0.10)' : 'none',
+                                    }}>
+                                    {m === 'Oat Milk' ? '🌾' : '🥛'} {m}
+                                  </button>
+                                ))}
+                              </div>
                             )}
                             {item.addOns && item.addOns.length > 0 && (
                               <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -2221,15 +2284,15 @@ export default function MenuPage() {
             <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '0 18px 20px',
               background: 'linear-gradient(to bottom, transparent, rgba(246,231,215,0.97) 32%)' }}>
               <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input type="text" placeholder="Your name *"
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <input type="text" placeholder="Your name *" maxLength={60}
                     value={customerName} onChange={e => setCustomerName(e.target.value)}
-                    style={{ flex: 1, border: `1px solid ${C.rule}`, borderRadius: 12,
+                    style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${C.rule}`, borderRadius: 12,
                       padding: '10px 14px', fontFamily: SANS, fontSize: 14,
                       background: C.card, outline: 'none' }} />
-                  <input type="text" placeholder="Note (optional)"
+                  <input type="text" placeholder="Note (optional)" maxLength={120}
                     value={note} onChange={e => setNote(e.target.value)}
-                    style={{ flex: 1, border: `1px solid ${C.rule}`, borderRadius: 12,
+                    style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${C.rule}`, borderRadius: 12,
                       padding: '10px 14px', fontFamily: SANS, fontSize: 14,
                       background: C.card, outline: 'none' }} />
                 </div>

@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     if (name) {
       const { data, error } = await getSupabase()
         .from('orders')
-        .select('ticket_code, customer_name, created_at')
+        .select('ticket_code, customer_name, created_at, items')
         .ilike('customer_name', `%${name.trim()}%`)
         .order('created_at', { ascending: false })
         .limit(5)

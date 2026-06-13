@@ -14,6 +14,7 @@ export interface MenuItem {
   image?: string
   imagePosition?: string
   addOns?: string[]
+  milkOptions?: string[]
 }
 
 export interface OrderItem {
