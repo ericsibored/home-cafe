@@ -33,6 +33,8 @@ const SANS  = 'var(--font-geist-sans), system-ui, sans-serif'
 const MONO  = 'var(--font-geist-mono), monospace'
 
 const VERSION = '0.03'
+const EVENT_END = new Date(2026, 5, 15) // midnight June 15 local = end of June 14
+const isLocked = new Date() >= EVENT_END
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Tab = 'menu' | 'rank' | 'collage'
@@ -533,7 +535,7 @@ function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
   const [current, setCurrent] = useState(0)
   const [wins, setWins] = useState<Record<string, number>>({})
   const [done, setDone] = useState(false)
-  const [view, setView] = useState<'play' | 'leaderboard'>('play')
+  const [view, setView] = useState<'play' | 'leaderboard'>(isLocked ? 'leaderboard' : 'play')
   const [playerName, setPlayerName] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -604,8 +606,8 @@ function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
   // Shared tab toggle JSX
   const tabToggle = (
     <div style={{ display: 'inline-flex', background: C.pale, borderRadius: 999, padding: 3 }}>
-      {(['play', 'leaderboard'] as const).map(v => (
-        <button key={v} onClick={() => setView(v)} style={{
+      {(isLocked ? ['leaderboard'] : ['play', 'leaderboard']).map(v => (
+        <button key={v} onClick={() => setView(v as 'play' | 'leaderboard')} style={{
           padding: '5px 12px', borderRadius: 999,
           fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
           color: view === v ? C.navy : C.midBlue,
@@ -704,13 +706,19 @@ function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
           </div>
         )}
 
-        <button onClick={() => { setView('play'); if (!done) {} }} style={{
-          marginTop: 20, width: '100%', padding: '13px 0', borderRadius: 999,
-          border: `1px solid ${C.blue}`, background: 'transparent',
-          fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.navy, cursor: 'pointer',
-        }}>
-          🎮 Play &amp; add your score
-        </button>
+        {isLocked ? (
+          <p style={{ marginTop: 20, textAlign: 'center', fontFamily: SANS, fontSize: 13, color: C.ink3 }}>
+            Voting closed — thanks for playing! 🎉
+          </p>
+        ) : (
+          <button onClick={() => { setView('play'); if (!done) {} }} style={{
+            marginTop: 20, width: '100%', padding: '13px 0', borderRadius: 999,
+            border: `1px solid ${C.blue}`, background: 'transparent',
+            fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.navy, cursor: 'pointer',
+          }}>
+            🎮 Play &amp; add your score
+          </button>
+        )}
       </div>
     )
   }
@@ -851,15 +859,28 @@ function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {[a, b].map(item => (
           <button key={item.id} onClick={() => choose(item)} style={{
-            background: C.card, borderRadius: 20, padding: 20,
+            background: C.card, borderRadius: 20, padding: 0,
             boxShadow: `inset 0 0 0 1px ${C.rule}`, border: 'none', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0,
+            overflow: 'hidden', textAlign: 'left',
           }}>
-            <span style={{ fontSize: 44 }}>{item.emoji}</span>
-            <p style={{ fontFamily: SERIF, fontWeight: 500, color: C.navy, fontSize: 14,
-              textAlign: 'center', lineHeight: 1.2 }}>{item.name}</p>
-            <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink2,
-              textAlign: 'center', lineHeight: 1.4 }}>{item.description}</p>
+            {item.image ? (
+              <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', flexShrink: 0 }}>
+                <img src={item.image} alt={item.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover',
+                    objectPosition: item.imagePosition ?? 'center 30%' }} />
+              </div>
+            ) : (
+              <div style={{ padding: '20px 20px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <span style={{ fontSize: 44 }}>{item.emoji}</span>
+              </div>
+            )}
+            <div style={{ padding: '10px 12px 14px', width: '100%' }}>
+              <p style={{ fontFamily: SERIF, fontWeight: 500, color: C.navy, fontSize: 14,
+                textAlign: 'center', lineHeight: 1.2 }}>{item.name}</p>
+              <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink2,
+                textAlign: 'center', lineHeight: 1.4, marginTop: 4 }}>{item.description}</p>
+            </div>
           </button>
         ))}
       </div>
@@ -1104,7 +1125,7 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
     <div style={{ padding: '20px 18px', maxWidth: 680, margin: '0 auto' }}>
 
       {/* ── Warm welcome (from order flow) ── */}
-      {cameFromOrder && !skipped && !postSuccess && (
+      {!isLocked && cameFromOrder && !skipped && !postSuccess && (
         <div style={{ background: 'linear-gradient(135deg, #f6e7d7 0%, #d9e8fa 100%)',
           borderRadius: 20, padding: '18px 20px', marginBottom: 20, textAlign: 'center',
           boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
@@ -1140,7 +1161,18 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
 
       {/* ── Camera section ── */}
       <div style={{ marginBottom: 32 }}>
-        {phase === 'idle' && !postSuccess && (
+        {isLocked && (
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <p style={{ fontSize: 28, marginBottom: 8 }}>📸</p>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: C.navy, marginBottom: 4 }}>
+              The wall is closed
+            </p>
+            <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink3 }}>
+              Thanks for being part of Lazy Orchard!
+            </p>
+          </div>
+        )}
+        {!isLocked && phase === 'idle' && !postSuccess && (
           <div style={{ textAlign: 'center', padding: '28px 0' }}>
             {cameFromOrder && !skipped ? (
               <>
@@ -1178,7 +1210,7 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
           </div>
         )}
 
-        {phase === 'live' && (
+        {!isLocked && phase === 'live' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
             <div style={{ width: '100%', maxWidth: 400, borderRadius: 20,
               overflow: 'hidden', background: '#000',
@@ -1209,7 +1241,7 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
           </div>
         )}
 
-        {phase === 'captured' && capturedImage && (
+        {!isLocked && phase === 'captured' && capturedImage && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
             <canvas ref={canvasRef} style={{ display: 'none' }} />
             {/* Polaroid preview */}
