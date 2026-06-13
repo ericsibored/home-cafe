@@ -34,6 +34,7 @@ const MONO  = 'var(--font-geist-mono), monospace'
 
 const VERSION = '0.05'
 const EVENT_END = new Date(2026, 5, 15) // midnight June 15 local = end of June 14
+const BETA_CUTOFF = '2026-06-13T04:00:00.000Z' // entries before this = Beta Testing
 const isLocked = new Date() >= EVENT_END
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -1347,58 +1348,86 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
             Take a selfie above and leave your mark
           </p>
         </div>
-      ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-          gap: '24px 16px',
-          paddingBottom: 48,
-        }}>
-          {entries.map((entry, i) => (
-            <div key={entry.id} style={{
-              background: C.card,
-              padding: '10px 10px 18px',
-              boxShadow: '0 4px 18px rgba(30,58,95,0.13)',
-              transform: ROTATIONS[i % ROTATIONS.length],
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              position: 'relative',
-            }}>
-              <img
-                src={entry.photo_url}
-                alt={`${entry.guest_name}'s selfie`}
-                style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
-              />
-              {/* Individual download button */}
-              <button
-                onClick={() => downloadPhoto(entry.photo_url, entry.guest_name)}
-                title="Download photo"
-                style={{ position: 'absolute', top: 14, right: 14,
-                  width: 26, height: 26, borderRadius: 999,
-                  background: 'rgba(255,255,255,0.85)', border: 'none',
-                  cursor: 'pointer', fontSize: 12, display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
-                ⬇
-              </button>
-              <div style={{ marginTop: 10, textAlign: 'center' }}>
-                <p style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 14, color: C.navy,
-                  lineHeight: 1.2 }}>
-                  {entry.guest_name}
-                </p>
-                {entry.note && (
-                  <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink2,
-                    marginTop: 4, lineHeight: 1.4, fontStyle: 'italic' }}>
-                    &ldquo;{entry.note}&rdquo;
+      ) : (() => {
+        const betaEntries = entries.filter(e => e.created_at < BETA_CUTOFF)
+        const eventEntries = entries.filter(e => e.created_at >= BETA_CUTOFF)
+        const renderGrid = (group: CollageEntry[], offset = 0) => (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            gap: '24px 16px',
+            marginBottom: 32,
+          }}>
+            {group.map((entry, i) => (
+              <div key={entry.id} style={{
+                background: C.card,
+                padding: '10px 10px 18px',
+                boxShadow: '0 4px 18px rgba(30,58,95,0.13)',
+                transform: ROTATIONS[(i + offset) % ROTATIONS.length],
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                position: 'relative',
+              }}>
+                <img
+                  src={entry.photo_url}
+                  alt={`${entry.guest_name}'s selfie`}
+                  style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
+                />
+                <button
+                  onClick={() => downloadPhoto(entry.photo_url, entry.guest_name)}
+                  title="Download photo"
+                  style={{ position: 'absolute', top: 14, right: 14,
+                    width: 26, height: 26, borderRadius: 999,
+                    background: 'rgba(255,255,255,0.85)', border: 'none',
+                    cursor: 'pointer', fontSize: 12, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
+                  ⬇
+                </button>
+                <div style={{ marginTop: 10, textAlign: 'center' }}>
+                  <p style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 14, color: C.navy,
+                    lineHeight: 1.2 }}>
+                    {entry.guest_name}
                   </p>
-                )}
-                <p style={{ fontFamily: SANS, fontSize: 10, color: C.ink3, marginTop: 4 }}>
-                  {formatDate(entry.created_at)}
-                </p>
+                  {entry.note && (
+                    <p style={{ fontFamily: SANS, fontSize: 11, color: C.ink2,
+                      marginTop: 4, lineHeight: 1.4, fontStyle: 'italic' }}>
+                      &ldquo;{entry.note}&rdquo;
+                    </p>
+                  )}
+                  <p style={{ fontFamily: SANS, fontSize: 10, color: C.ink3, marginTop: 4 }}>
+                    {formatDate(entry.created_at)}
+                  </p>
+                </div>
               </div>
+            ))}
+          </div>
+        )
+        const SectionHeader = ({ label }: { label: string }) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: C.ink3,
+              textTransform: 'uppercase', letterSpacing: 0.8, whiteSpace: 'nowrap' }}>
+              {label}
             </div>
-          ))}
-        </div>
-      )}
+            <div style={{ flex: 1, height: 1, background: C.rule }} />
+          </div>
+        )
+        return (
+          <div style={{ paddingBottom: 48 }}>
+            {eventEntries.length > 0 && (
+              <>
+                <SectionHeader label="Lazy Orchard Cafe 6/13/2026" />
+                {renderGrid(eventEntries, 0)}
+              </>
+            )}
+            {betaEntries.length > 0 && (
+              <>
+                <SectionHeader label="Beta Testing" />
+                {renderGrid(betaEntries, eventEntries.length)}
+              </>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
