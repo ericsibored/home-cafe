@@ -2007,7 +2007,7 @@ export default function MenuPage() {
                             <img src={item.image} alt={item.name}
                               style={{ position: 'absolute', top: 0, left: 0,
                                 width: '100%', height: '100%', objectFit: 'cover',
-                                objectPosition: 'center 30%', display: 'block' }}
+                                objectPosition: item.imagePosition ?? 'center 30%', display: 'block' }}
                               onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
                           </div>
                         ) : (

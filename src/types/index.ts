@@ -12,6 +12,7 @@ export interface MenuItem {
   ingredients?: string[]
   tempOptions?: ('hot' | 'iced')[]
   image?: string
+  imagePosition?: string
   addOns?: string[]
 }
 
