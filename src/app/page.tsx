@@ -1389,13 +1389,15 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
         const eventEntries = entries.filter(e => e.created_at >= BETA_CUTOFF)
         const renderGrid = (group: CollageEntry[], offset = 0) => (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
             gap: '24px 16px',
             marginBottom: 32,
           }}>
             {group.map((entry, i) => (
               <div key={entry.id} style={{
+                width: 150,
                 background: C.card,
                 padding: '10px 10px 18px',
                 boxShadow: '0 4px 18px rgba(30,58,95,0.13)',
