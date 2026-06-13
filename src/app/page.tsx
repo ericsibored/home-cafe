@@ -1629,13 +1629,31 @@ export default function MenuPage() {
   const [ticketLookupLoading, setTicketLookupLoading] = useState(false)
 
   const lookupTicketByName = async () => {
-    if (!ticketLookupName.trim()) return
+    const query = ticketLookupName.trim()
+    if (!query) return
     setTicketLookupLoading(true)
     setTicketLookupResults(null)
     try {
-      const res = await fetch(`/api/orders?name=${encodeURIComponent(ticketLookupName.trim())}`)
-      const data = await res.json()
-      setTicketLookupResults(Array.isArray(data) ? data : [])
+      const isCode = /^\d{1,4}$/.test(query)
+      if (isCode) {
+        const code = query.padStart(4, '0')
+        const res = await fetch(`/api/orders?code=${code}`)
+        const body = await res.json()
+        if (!res.ok || body?.error) {
+          setTicketLookupResults([])
+        } else {
+          setTicketLookupResults([{
+            ticket_code: body.ticket_code,
+            customer_name: body.customer_name,
+            created_at: body.created_at,
+            items: body.items,
+          }])
+        }
+      } else {
+        const res = await fetch(`/api/orders?name=${encodeURIComponent(query)}`)
+        const data = await res.json()
+        setTicketLookupResults(Array.isArray(data) ? data : [])
+      }
     } catch {
       setTicketLookupResults([])
     } finally {
@@ -2014,12 +2032,12 @@ export default function MenuPage() {
                   border: 'none', cursor: 'pointer', fontSize: 14, color: C.midBlue }}>✕</button>
             </div>
             <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, marginBottom: 14 }}>
-              Enter your first name to find your order number.
+              Enter your name to find your order number, or enter your order number to see your items.
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="text"
-                placeholder="Your first name"
+                placeholder="Name or order # (e.g. 0042)"
                 value={ticketLookupName}
                 onChange={e => setTicketLookupName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && lookupTicketByName()}
