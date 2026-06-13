@@ -180,7 +180,7 @@ function AddControl({ qty, onAdd, onRemove }: { qty: number; onAdd: () => void; 
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function StarDisplay({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg' | 'xl' }) {
