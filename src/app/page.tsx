@@ -32,6 +32,8 @@ const SERIF = 'var(--font-newsreader), Georgia, serif'
 const SANS  = 'var(--font-geist-sans), system-ui, sans-serif'
 const MONO  = 'var(--font-geist-mono), monospace'
 
+const VERSION = '0.01'
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Tab = 'menu' | 'rank' | 'collage'
 type CatFilter = 'all' | 'drinks' | 'food'
@@ -1825,11 +1827,16 @@ export default function MenuPage() {
               letterSpacing: 0.5, textTransform: 'uppercase' }}>Café · Order &amp; Pay</div>
           </div>
         </div>
-        <Link href="/orders" style={{ fontFamily: SANS, fontSize: 12, color: C.midBlue,
-          padding: '6px 10px', borderRadius: 999, background: C.card,
-          boxShadow: `inset 0 0 0 1px ${C.rule}`, textDecoration: 'none' }}>
-          Staff →
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: C.ink3, letterSpacing: 0.5 }}>
+            v{VERSION}
+          </span>
+          <Link href="/orders" style={{ fontFamily: SANS, fontSize: 12, color: C.midBlue,
+            padding: '6px 10px', borderRadius: 999, background: C.card,
+            boxShadow: `inset 0 0 0 1px ${C.rule}`, textDecoration: 'none' }}>
+            Staff →
+          </Link>
+        </div>
       </header>
 
       {/* Welcome panel */}
