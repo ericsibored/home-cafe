@@ -32,7 +32,7 @@ const SERIF = 'var(--font-newsreader), Georgia, serif'
 const SANS  = 'var(--font-geist-sans), system-ui, sans-serif'
 const MONO  = 'var(--font-geist-mono), monospace'
 
-const VERSION = '0.11'
+const VERSION = '0.12'
 const EVENT_END = new Date(2026, 5, 15) // midnight June 15 local = end of June 14
 const BETA_CUTOFF = '2026-06-13T04:00:00.000Z' // entries before this = Beta Testing
 const isLocked = new Date() >= EVENT_END
