@@ -1222,7 +1222,7 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
                 {cameraError}
               </p>
             )}
-            <button onClick={startCamera} style={{
+            <button onClick={() => startCamera()} style={{
               padding: '16px 40px', borderRadius: 999,
               background: C.navy, border: 'none',
               fontFamily: SANS, fontSize: 16, fontWeight: 600,
