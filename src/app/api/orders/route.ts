@@ -49,20 +49,44 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { customer_name, items, total, note, ticketCode: providedCode } = body
 
-    // Generate sequential 4-digit ticket code (0000, 0001, 0002, ...)
+    if (!customer_name?.trim() || !Array.isArray(items) || items.length === 0) {
+      return Response.json({ error: 'Missing required fields.' }, { status: 400 })
+    }
+
+    // Rate limit: reject if same name placed an order in the last 10 minutes
+    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+    const { count: recentCount } = await getSupabase()
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .ilike('customer_name', customer_name.trim())
+      .gte('created_at', tenMinsAgo)
+
+    if ((recentCount ?? 0) > 0) {
+      return Response.json(
+        { error: 'An order with this name was placed recently. Check your ticket number or ask a staff member.' },
+        { status: 429 }
+      )
+    }
+
+    // Generate sequential ticket code from highest existing code
     let ticket_code: string
     if (providedCode) {
       ticket_code = providedCode
     } else {
-      const { count } = await getSupabase()
+      const { data: latest } = await getSupabase()
         .from('orders')
-        .select('*', { count: 'exact', head: true })
-      ticket_code = String(count ?? 0).padStart(4, '0')
+        .select('ticket_code')
+        .order('ticket_code', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const nextCode = latest?.ticket_code != null ? parseInt(latest.ticket_code, 10) + 1 : 0
+      ticket_code = String(nextCode).padStart(4, '0')
     }
 
     const { data, error } = await getSupabase()
       .from('orders')
-      .insert([{ customer_name, items, total, note: note || null, status: 'pending', ticket_code }])
+      .insert([{ customer_name: customer_name.trim(), items, total, note: note || null, status: 'pending', ticket_code }])
       .select()
       .single()
 

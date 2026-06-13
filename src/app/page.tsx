@@ -1491,6 +1491,8 @@ export default function MenuPage() {
   const [customerName, setCustomerName] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [dupWarning, setDupWarning] = useState(false)
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null)
   const [tipOption, setTipOption] = useState<string | null>(null)
   const [customTipStr, setCustomTipStr] = useState('')
@@ -1588,6 +1590,17 @@ export default function MenuPage() {
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
+  const openConfirm = async () => {
+    if (!customerName.trim() || cartItems.length === 0) return
+    setDupWarning(false)
+    try {
+      const res = await fetch(`/api/orders?name=${encodeURIComponent(customerName.trim())}`)
+      const data = await res.json()
+      if (Array.isArray(data) && data.length > 0) setDupWarning(true)
+    } catch {}
+    setConfirmOpen(true)
+  }
+
   const handleSubmit = async () => {
     if (!customerName.trim() || cartItems.length === 0) return
     setLoading(true)
@@ -1602,6 +1615,7 @@ export default function MenuPage() {
       const text = await res.text()
       const body = text ? JSON.parse(text) : {}
       if (!res.ok) throw new Error(body.error ?? `Server error ${res.status}`)
+      setConfirmOpen(false)
       setPlacedOrder({
         id: body.id,
         total,
@@ -2317,7 +2331,7 @@ export default function MenuPage() {
                 {error && (
                   <p style={{ fontFamily: SANS, fontSize: 12, color: C.red }}>{error}</p>
                 )}
-                <button onClick={handleSubmit}
+                <button onClick={openConfirm}
                   disabled={!customerName.trim() || loading}
                   style={{ background: C.navy, borderRadius: 999, padding: '14px 22px',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -2350,6 +2364,61 @@ export default function MenuPage() {
           onClose={() => setShowReviews(false)}
           onNewReviews={handleNewReviews}
         />
+      )}
+
+      {/* Order confirmation bottom sheet */}
+      {confirmOpen && (
+        <div onClick={() => setConfirmOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200,
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: C.card, borderRadius: '24px 24px 0 0', padding: '24px 20px 36px',
+              width: '100%', maxWidth: 480, boxShadow: '0 -8px 32px rgba(30,58,95,0.18)' }}>
+            <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22, color: C.navy, marginBottom: 16 }}>
+              Confirm your order
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16,
+              paddingBottom: 14, borderBottom: `1px solid ${C.rule}` }}>
+              {cartItems.map(item => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between',
+                  fontFamily: SANS, fontSize: 13, color: C.ink2 }}>
+                  <span><span style={{ fontWeight: 600 }}>{item.quantity}×</span> {item.name}</span>
+                  <span style={{ color: C.ink3 }}>${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontFamily: SANS, fontSize: 13, color: C.navy, marginBottom: 4 }}>
+              For: <span style={{ fontWeight: 600 }}>{customerName.trim()}</span>
+            </div>
+            {note.trim() && (
+              <div style={{ fontFamily: SANS, fontSize: 12, color: C.ink3, marginBottom: 4 }}>
+                Note: {note.trim()}
+              </div>
+            )}
+            {dupWarning && (
+              <div style={{ background: '#fff8e6', borderRadius: 10, padding: '10px 14px', margin: '10px 0',
+                fontFamily: SANS, fontSize: 12, color: '#a06000' }}>
+                ⚠️ An order with this name already exists. If that was you, check your ticket number instead of placing a new order.
+              </div>
+            )}
+            {error && <p style={{ fontFamily: SANS, fontSize: 12, color: C.red, marginTop: 8 }}>{error}</p>}
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => setConfirmOpen(false)}
+                style={{ flex: 1, padding: '13px 0', borderRadius: 999,
+                  border: `1px solid ${C.rule}`, background: 'transparent',
+                  fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.navy, cursor: 'pointer' }}>
+                Edit
+              </button>
+              <button onClick={handleSubmit} disabled={loading}
+                style={{ flex: 2, padding: '13px 0', borderRadius: 999,
+                  background: C.navy, border: 'none',
+                  fontFamily: SANS, fontSize: 14, fontWeight: 700, color: C.peach,
+                  cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1 }}>
+                {loading ? 'Placing…' : 'Place order'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   )
