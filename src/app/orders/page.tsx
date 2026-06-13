@@ -30,12 +30,33 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ]
 
+const STAFF_PASSWORD = 'semericafe'
+
 export default function OrdersPage() {
+  const [authed, setAuthed] = useState(false)
+  const [pw, setPw] = useState('')
+  const [pwError, setPwError] = useState(false)
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (sessionStorage.getItem('staff_authed') === '1') setAuthed(true)
+  }, [])
+
+  const submitPassword = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pw === STAFF_PASSWORD) {
+      sessionStorage.setItem('staff_authed', '1')
+      setAuthed(true)
+    } else {
+      setPwError(true)
+      setPw('')
+    }
+  }
+
+  useEffect(() => {
+    if (!authed) return
     fetch('/api/orders')
       .then(r => r.json())
       .then(data => {
@@ -61,7 +82,33 @@ export default function OrdersPage() {
       .subscribe()
 
     return () => { getSupabase().removeChannel(channel) }
-  }, [])
+  }, [authed])
+
+  if (!authed) {
+    return (
+      <main className="min-h-screen bg-[#f6e7d7] flex items-center justify-center">
+        <form onSubmit={submitPassword} className="bg-white rounded-2xl p-8 shadow-md flex flex-col items-center gap-4 w-72">
+          <Image src="/logo.png" alt="Lazy Orchard Café" width={52} height={52} />
+          <p className="text-[#1e3a5f] font-bold text-sm">Staff Access</p>
+          <input
+            type="password"
+            value={pw}
+            onChange={e => { setPw(e.target.value); setPwError(false) }}
+            placeholder="Password"
+            autoFocus
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8fafee]"
+          />
+          {pwError && <p className="text-red-500 text-xs">Incorrect password</p>}
+          <button
+            type="submit"
+            className="w-full bg-[#8fafee] text-[#1e3a5f] font-semibold text-sm py-2 rounded-lg hover:bg-[#7a9ee0] transition-colors"
+          >
+            Enter
+          </button>
+        </form>
+      </main>
+    )
+  }
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     await fetch(`/api/orders/${id}`, {
