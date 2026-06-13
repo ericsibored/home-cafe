@@ -1009,6 +1009,7 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
   const [cameraError, setCameraError] = useState('')
   const [skipped, setSkipped] = useState(false)
   const [postSuccess, setPostSuccess] = useState(false)
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
@@ -1035,17 +1036,35 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
     }
   }, [])
 
-  const startCamera = async () => {
+  const startCamera = async (mode: 'user' | 'environment' = facingMode) => {
     setCameraError('')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
+        video: { facingMode: mode },
         audio: false,
       })
       streamRef.current = stream
       setPhase('live')
     } catch {
       setCameraError('Could not access camera. Please allow camera permissions and try again.')
+    }
+  }
+
+  const flipCamera = async () => {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    const newMode: 'user' | 'environment' = facingMode === 'user' ? 'environment' : 'user'
+    setFacingMode(newMode)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newMode },
+        audio: false,
+      })
+      streamRef.current = stream
+      const videoEl = document.querySelector<HTMLVideoElement>('#collage-video')
+      if (videoEl) videoEl.srcObject = stream
+    } catch {
+      setCameraError('Could not switch camera.')
     }
   }
 
@@ -1062,6 +1081,10 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
     canvas.height = videoEl.videoHeight || 480
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    if (facingMode === 'user') {
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
+    }
     ctx.drawImage(videoEl, 0, 0)
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
     setCapturedImage(dataUrl)
@@ -1076,7 +1099,7 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
     setCameraError('')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
+        video: { facingMode },
         audio: false,
       })
       streamRef.current = stream
@@ -1222,20 +1245,33 @@ function CollageTab({ cameFromOrder = false, prefillName = '' }: {
                 autoPlay
                 playsInline
                 muted
-                style={{ width: '100%', display: 'block' }}
+                style={{ width: '100%', display: 'block',
+                  transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
               />
             </div>
             <canvas ref={canvasRef} style={{ display: 'none' }} />
-            <button onClick={snap} style={{
-              width: 76, height: 76, borderRadius: 999,
-              background: C.card, border: `4px solid ${C.navy}`,
-              cursor: 'pointer', fontSize: 30,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 16px rgba(30,58,95,0.22)',
-              flexShrink: 0,
-            }}>
-              📸
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <button onClick={flipCamera} title="Flip camera" style={{
+                width: 46, height: 46, borderRadius: 999,
+                background: C.pale, border: `2px solid ${C.rule}`,
+                cursor: 'pointer', fontSize: 20,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(30,58,95,0.12)',
+              }}>
+                🔄
+              </button>
+              <button onClick={snap} style={{
+                width: 76, height: 76, borderRadius: 999,
+                background: C.card, border: `4px solid ${C.navy}`,
+                cursor: 'pointer', fontSize: 30,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 16px rgba(30,58,95,0.22)',
+                flexShrink: 0,
+              }}>
+                📸
+              </button>
+              <div style={{ width: 46 }} />
+            </div>
             <p style={{ fontFamily: SANS, fontSize: 12, color: C.ink3, marginTop: -8 }}>
               Tap to snap
             </p>
@@ -2099,8 +2135,10 @@ export default function MenuPage() {
                           </div>
                           {/* Price + temp + tags row */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                            <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 12,
+                              color: C.ink3, textDecoration: 'line-through' }}>${item.price.toFixed(2)}</span>
                             <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14,
-                              color: C.blueDeep }}>${item.price.toFixed(2)}</span>
+                              color: C.green }}>$0.00</span>
                             {item.tempOptions && item.tempOptions.length > 1 && (
                               <div onClick={e => e.stopPropagation()}>
                                 <TempPill
