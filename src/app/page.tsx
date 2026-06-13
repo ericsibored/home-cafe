@@ -32,7 +32,7 @@ const SERIF = 'var(--font-newsreader), Georgia, serif'
 const SANS  = 'var(--font-geist-sans), system-ui, sans-serif'
 const MONO  = 'var(--font-geist-mono), monospace'
 
-const VERSION = '0.12'
+const VERSION = '0.18'
 const EVENT_END = new Date(2026, 5, 15) // midnight June 15 local = end of June 14
 const BETA_CUTOFF = '2026-06-13T04:00:00.000Z' // entries before this = Beta Testing
 const isLocked = new Date() >= EVENT_END
@@ -877,10 +877,10 @@ function RankTab({ ratings: _ratings }: { ratings: Record<string, number> }) {
             overflow: 'hidden', textAlign: 'left',
           }}>
             {item.image ? (
-              <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', flexShrink: 0 }}>
+              <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', flexShrink: 0, background: C.surface }}>
                 <img src={item.image} alt={item.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover',
-                    objectPosition: item.imagePosition ?? 'center 30%' }} />
+                  style={{ width: '100%', height: '100%', objectFit: 'contain',
+                    objectPosition: item.imagePosition ?? 'center center' }} />
               </div>
             ) : (
               <div style={{ padding: '20px 20px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
@@ -2183,11 +2183,11 @@ export default function MenuPage() {
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}>
                         {/* DoorDash-style photo — tall, full bleed */}
                         {item.image ? (
-                          <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+                          <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', flexShrink: 0, position: 'relative', background: C.surface }}>
                             <img src={item.image} alt={item.name}
                               style={{ position: 'absolute', top: 0, left: 0,
-                                width: '100%', height: '100%', objectFit: 'cover',
-                                objectPosition: item.imagePosition ?? 'center 30%', display: 'block' }}
+                                width: '100%', height: '100%', objectFit: 'contain',
+                                objectPosition: item.imagePosition ?? 'center center', display: 'block' }}
                               onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
                           </div>
                         ) : (
@@ -2243,7 +2243,13 @@ export default function MenuPage() {
                                 ☕ hot only
                               </span>
                             )}
-                            {item.milkOptions && item.milkOptions.length > 0 && (
+                            {item.milkOptions && item.milkOptions.length === 1 && (
+                              <span style={{ fontFamily: SANS, fontSize: 10.5, padding: '2px 8px',
+                                borderRadius: 999, background: C.pale, color: C.navy, fontWeight: 600 }}>
+                                🍌 banana milk only
+                              </span>
+                            )}
+                            {item.milkOptions && item.milkOptions.length > 1 && (
                               <div onClick={e => e.stopPropagation()}
                                 style={{ display: 'inline-flex', background: C.pale, borderRadius: 999, padding: 3 }}>
                                 {item.milkOptions.map(m => (
