@@ -93,7 +93,7 @@ export const MENU: MenuItem[] = [
     allergens: ['gluten', 'eggs', 'dairy'],
     ingredients: ['jasmine sponge cake', 'green grapes', 'diplomat cream', 'heavy cream', 'jasmine tea'],
     image: '/menu/grape-cake.jpeg',
-    imagePosition: '70% 85%',
+    imagePosition: '70% 95%',
   },
   {
     id: 'strawberry-earl-grey-cookies',
