@@ -32,7 +32,7 @@ const SERIF = 'var(--font-newsreader), Georgia, serif'
 const SANS  = 'var(--font-geist-sans), system-ui, sans-serif'
 const MONO  = 'var(--font-geist-mono), monospace'
 
-const VERSION = '0.02'
+const VERSION = '0.03'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Tab = 'menu' | 'rank' | 'collage'
