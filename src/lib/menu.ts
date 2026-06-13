@@ -13,7 +13,7 @@ export const MENU: MenuItem[] = [
     allergens: ['dairy', 'soy'],
     ingredients: ['espresso', 'banana milk', 'caramel syrup', 'oat milk'],
     tempOptions: ['iced'],
-    image: '/menu/banana-latte.jpg',
+    image: '/menu/banana-latte.jpeg',
   },
   {
     id: 'hojicha-persimmon',
@@ -26,7 +26,7 @@ export const MENU: MenuItem[] = [
     allergens: ['soy'],
     ingredients: ['roasted hojicha', 'persimmon purée', 'oat milk', 'honey'],
     tempOptions: ['iced'],
-    image: '/menu/hojicha-persimmon.jpg',
+    image: '/menu/hojicha-persimmon.jpeg',
   },
   {
     id: 'matcha-yuzuade',
@@ -66,7 +66,7 @@ export const MENU: MenuItem[] = [
     allergens: ['dairy', 'soy'],
     ingredients: ['espresso', 'oat milk'],
     tempOptions: ['hot'],
-    image: '/menu/coffee-latte.jpg',
+    image: '/menu/coffee-latte.jpeg',
     addOns: ['strawberry'],
   },
   // Food
@@ -91,6 +91,7 @@ export const MENU: MenuItem[] = [
     calories: 280,
     allergens: ['gluten', 'eggs', 'dairy'],
     ingredients: ['jasmine sponge cake', 'green grapes', 'diplomat cream', 'heavy cream', 'jasmine tea'],
+    image: '/menu/grape-cake.jpeg',
   },
   {
     id: 'strawberry-earl-grey-cookies',
@@ -102,6 +103,7 @@ export const MENU: MenuItem[] = [
     calories: 140,
     allergens: ['gluten', 'dairy'],
     ingredients: ['butter', 'all-purpose flour', 'earl grey tea', 'strawberry jam', 'powdered sugar'],
+    image: '/menu/strawberry-earlgrey.jpeg',
   },
   {
     id: 'black-sesame-coconut-cookies',
