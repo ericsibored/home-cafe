@@ -2316,6 +2316,37 @@ export default function MenuPage() {
             <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '0 18px 20px',
               background: 'linear-gradient(to bottom, transparent, rgba(246,231,215,0.97) 32%)' }}>
               <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Cart line items */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {cartItems.map(item => (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8,
+                      background: C.card, borderRadius: 12, padding: '8px 12px',
+                      boxShadow: `inset 0 0 0 1px ${C.rule}` }}>
+                      <span style={{ fontFamily: SANS, fontSize: 13, color: C.navy, flex: 1, minWidth: 0,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.name}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <button onClick={() => updateQty(item.id, -1)}
+                          style={{ width: 26, height: 26, borderRadius: 999, background: C.pale,
+                            border: 'none', cursor: 'pointer', fontSize: 16, color: C.midBlue,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
+                          −
+                        </button>
+                        <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 13,
+                          color: C.navy, minWidth: 16, textAlign: 'center' }}>
+                          {item.quantity}
+                        </span>
+                        <button onClick={() => updateQty(item.id, 1)}
+                          style={{ width: 26, height: 26, borderRadius: 999, background: C.blue,
+                            border: 'none', cursor: 'pointer', fontSize: 16, color: C.navy,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <input type="text" placeholder="Your name *" maxLength={60}
                     value={customerName} onChange={e => setCustomerName(e.target.value)}
