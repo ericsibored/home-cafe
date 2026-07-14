@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { photoBase64, note, guestName } = await request.json()
+    const { photoBase64, note, guestName, eventId } = await request.json()
 
     if (!guestName?.trim()) {
       return Response.json({ error: 'Guest name is required' }, { status: 400 })
@@ -60,6 +60,7 @@ export async function POST(request: Request) {
         photo_url: photoUrl,
         note: note?.trim() || null,
         guest_name: guestName.trim(),
+        event_id: eventId ?? null,
       }])
       .select()
       .single()

@@ -104,6 +104,15 @@ export interface EventOrder {
   created_at: string
 }
 
+export interface CollageEntry {
+  id: string
+  photo_url: string
+  note: string | null
+  guest_name: string
+  event_id: string | null
+  created_at: string
+}
+
 export type BuilderCategory = 'base' | 'syrup' | 'modifier'
 
 // A row in builder_options — one choice in the "Build Your Own" matrix.

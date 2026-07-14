@@ -565,12 +565,17 @@ export function EventView({
         {hasBuilder && <BuildYourOwn options={builderOptions} orderable={orderable} onOrder={orderBuilder} />}
       </div>
 
-      {/* Footer — subtle tip link only */}
+      {/* Footer — subtle tip link + photo wall */}
       <footer style={{ marginTop: 32, padding: '20px 18px 28px', textAlign: 'center' }}>
-        <a href={venmoProfileUrl()} target="_blank" rel="noopener noreferrer"
-          style={{ fontFamily: SANS, fontSize: 13, color: C.venmo, textDecoration: 'none' }}>
-          Enjoyed a visit? Leave a tip on Venmo ☕
-        </a>
+        <div style={{ display: 'flex', gap: 18, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <a href={venmoProfileUrl()} target="_blank" rel="noopener noreferrer"
+            style={{ fontFamily: SANS, fontSize: 13, color: C.venmo, textDecoration: 'none' }}>
+            Leave a tip on Venmo ☕
+          </a>
+          <Link href="/wall" style={{ fontFamily: SANS, fontSize: 13, color: C.midBlue, textDecoration: 'none' }}>
+            Photo wall 📸
+          </Link>
+        </div>
         <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: C.ink3, marginTop: 10 }}>
           Lazy Orchard Café
         </div>
