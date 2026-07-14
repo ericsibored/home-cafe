@@ -528,10 +528,19 @@ export function EventView({
       display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <header style={{ padding: '16px 18px 8px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
-        <Link href="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
-          fontFamily: SANS, fontSize: 13, color: C.midBlue, textDecoration: 'none', marginBottom: 14 }}>
-          {home ? 'Past events →' : '← All events'}
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, marginBottom: 14 }}>
+          <Link href="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontFamily: SANS, fontSize: 13, color: C.midBlue, textDecoration: 'none' }}>
+            {home ? 'Past events →' : '← All events'}
+          </Link>
+          <Link href="/wall" style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.navy, background: C.card,
+            borderRadius: 999, padding: '6px 14px', textDecoration: 'none',
+            boxShadow: '0 2px 8px rgba(30,58,95,0.1), inset 0 0 0 1px rgba(30,58,95,0.06)' }}>
+            📸 Photo wall
+          </Link>
+        </div>
         <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase',
           letterSpacing: 0.8, color: C.midBlue }}>
           {formatEventDate(event.date)}{past ? ' · Past event' : ' · Now serving'}
