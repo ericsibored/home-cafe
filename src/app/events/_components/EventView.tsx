@@ -19,7 +19,7 @@ function formatEventDate(iso: string): string {
 // The in-progress order the guest is about to place.
 type OrderDraft =
   | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[] }
-  | { type: 'builder'; base: string; milk: string | null; syrup: string | null; modifier: string | null }
+  | { type: 'builder'; base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null }
 
 // ── Specialty card ──────────────────────────────────────────────────────────
 function Tag({ children }: { children: React.ReactNode }) {
@@ -211,17 +211,19 @@ function OptionChip({ name, selected, available, onClick }: {
 function BuildYourOwn({ options, orderable, onOrder }: {
   options: BuilderOption[]
   orderable: boolean
-  onOrder: (draft: { base: string; milk: string | null; syrup: string | null; modifier: string | null }) => void
+  onOrder: (draft: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null }) => void
 }) {
   const byCat = (cat: BuilderCategory) => options.filter(o => o.category === cat)
   const bases = byCat('base')
   const milks = byCat('milk')
   const syrups = byCat('syrup')
+  const creams = byCat('cream')
   const modifiers = byCat('modifier')
 
   const [base, setBase] = useState<string | null>(null)
   const [milk, setMilk] = useState<string | null>(null)
   const [syrup, setSyrup] = useState<string | null>(null)
+  const [cream, setCream] = useState<string | null>(null)
   const [modifier, setModifier] = useState<string | null>(null)
 
   const step = (label: string, hint: string, opts: BuilderOption[],
@@ -250,15 +252,15 @@ function BuildYourOwn({ options, orderable, onOrder }: {
   const stepDefs = [
     { label: 'Base', hint: 'choose one', opts: bases, sel: base, set: setBase, optional: false },
     { label: 'Milk', hint: 'choose one', opts: milks, sel: milk, set: setMilk, optional: false },
-    { label: 'Syrup', hint: 'choose one', opts: syrups, sel: syrup, set: setSyrup, optional: false },
+    { label: 'Syrup', hint: 'optional', opts: syrups, sel: syrup, set: setSyrup, optional: true },
+    { label: 'Cream top', hint: 'optional', opts: creams, sel: cream, set: setCream, optional: true },
     { label: 'Modifier', hint: 'optional', opts: modifiers, sel: modifier, set: setModifier, optional: true },
   ].filter(s => s.opts.length > 0)
 
-  const complete = !!base
-    && (milks.length === 0 || !!milk)
-    && (syrups.length === 0 || !!syrup)
+  // Base is required; milk too when offered. Syrup / cream / modifier are optional.
+  const complete = !!base && (milks.length === 0 || !!milk)
 
-  const parts = [base, milk, syrup, modifier].filter(Boolean)
+  const parts = [base, milk, syrup, cream, modifier].filter(Boolean)
 
   return (
     <section>
@@ -285,7 +287,7 @@ function BuildYourOwn({ options, orderable, onOrder }: {
           </div>
         </div>
         {orderable && complete && (
-          <OrderButton onClick={() => onOrder({ base: base!, milk, syrup, modifier })}>
+          <OrderButton onClick={() => onOrder({ base: base!, milk, syrup, cream, modifier })}>
             Order this drink
           </OrderButton>
         )}
@@ -310,7 +312,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
 
   const title = draft.type === 'specialty'
     ? draft.name
-    : [draft.base, draft.milk, draft.syrup, draft.modifier].filter(Boolean).join(' + ')
+    : [draft.base, draft.milk, draft.syrup, draft.cream, draft.modifier].filter(Boolean).join(' + ')
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(30,58,95,0.35)',
@@ -494,7 +496,7 @@ export function EventView({
     setPlaceError('')
     setDraft({ type: 'specialty', name: item.name, temps: item.details?.tempOptions ?? [] })
   }
-  const orderBuilder = (d: { base: string; milk: string | null; syrup: string | null; modifier: string | null }) => {
+  const orderBuilder = (d: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null }) => {
     setPlaceError('')
     setDraft({ type: 'builder', ...d })
   }
@@ -514,9 +516,10 @@ export function EventView({
         base: draft.base,
         ...(draft.milk ? { milk: draft.milk } : {}),
         ...(draft.syrup ? { syrup: draft.syrup } : {}),
+        ...(draft.cream ? { cream: draft.cream } : {}),
         ...(draft.modifier ? { modifier: draft.modifier } : {}),
       }
-      label = [draft.base, draft.milk, draft.syrup, draft.modifier].filter(Boolean).join(' + ')
+      label = [draft.base, draft.milk, draft.syrup, draft.cream, draft.modifier].filter(Boolean).join(' + ')
     }
 
     // anon INSERT only — no .select() (guests can't read the orders table).
