@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import type { Session } from '@supabase/supabase-js'
 import { getSupabase } from '@/lib/supabase'
 import { C, SERIF, SANS } from '@/lib/theme'
@@ -153,9 +154,14 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
               {event && !event.is_active && ' · not currently active'}
             </p>
           </div>
-          <button onClick={onSignOut} style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 600,
-            color: C.midBlue, background: 'transparent', border: `1px solid ${C.rule}`,
-            borderRadius: 999, padding: '6px 14px', cursor: 'pointer' }}>Sign out</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            <Link href="/orders" style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 600,
+              color: C.navy, textDecoration: 'none', border: `1px solid ${C.rule}`,
+              borderRadius: 999, padding: '6px 12px' }}>Order queue →</Link>
+            <button onClick={onSignOut} style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 600,
+              color: C.midBlue, background: 'transparent', border: `1px solid ${C.rule}`,
+              borderRadius: 999, padding: '6px 14px', cursor: 'pointer' }}>Sign out</button>
+          </div>
         </div>
 
         {loading ? (

@@ -289,27 +289,36 @@ function BuildYourOwn({ options, orderable, onOrder }: {
       <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, marginBottom: 16 }}>
         Pick a base and build your drink from there.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {stepDefs.map((s, i) => (
-          <div key={s.label}>{step(`${i + 1} · ${s.label}`, s.hint, s.opts, s.sel, s.set, s.optional)}</div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 18, background: C.card, borderRadius: 16, padding: '14px 16px',
-        boxShadow: `inset 0 0 0 1px ${C.rule}`, display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
-            color: C.midBlue, marginBottom: 4 }}>Your drink</div>
-          <div style={{ fontFamily: SERIF, fontSize: 16, color: complete ? C.navy : C.ink3 }}>
-            {complete ? parts.join(' + ') : 'Choose your options to build a drink'}
-          </div>
+      {/* One distinct item: the whole builder in a white card like the specialties */}
+      <div style={{ background: C.card, borderRadius: 18, padding: 18,
+        boxShadow: '0 2px 12px rgba(30,58,95,0.09)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {stepDefs.map((s, i) => (
+            <div key={s.label}>{step(`${i + 1} · ${s.label}`, s.hint, s.opts, s.sel, s.set, s.optional)}</div>
+          ))}
         </div>
-        {orderable && complete && (
-          <OrderButton onClick={() => onOrder({ base: base!, milk, syrup, cream, modifier })}>
-            Order this drink
-          </OrderButton>
-        )}
+
+        <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.rule}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
+              color: C.midBlue, marginBottom: 4 }}>Your drink</div>
+            <div style={{ fontFamily: SERIF, fontSize: 16, color: complete ? C.navy : C.ink3 }}>
+              {complete ? parts.join(' + ') : 'Choose your options to build a drink'}
+            </div>
+          </div>
+          {orderable && (
+            <button
+              onClick={complete ? () => onOrder({ base: base!, milk, syrup, cream, modifier }) : undefined}
+              disabled={!complete}
+              style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '10px 18px',
+                borderRadius: 999, background: C.navy, color: C.peach, border: 'none', flexShrink: 0,
+                cursor: complete ? 'pointer' : 'not-allowed', opacity: complete ? 1 : 0.45,
+                boxShadow: complete ? '0 2px 8px rgba(30,58,95,0.2)' : 'none' }}>
+              Order this drink
+            </button>
+          )}
+        </div>
       </div>
     </section>
   )

@@ -1,250 +1,212 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Image from 'next/image'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import type { Session } from '@supabase/supabase-js'
 import { getSupabase } from '@/lib/supabase'
-import type { Order, OrderStatus } from '@/types'
+import { C, SERIF, SANS } from '@/lib/theme'
+import type { CafeEvent, EventOrder, EventOrderStatus } from '@/types'
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: 'Awaiting Payment',
-  paid: 'Paid',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
+function timeAgo(iso: string): string {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  return `${Math.floor(s / 3600)}h ago`
 }
 
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  paid: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-gray-100 text-gray-500',
-}
+// ── Login gate (Supabase Auth — same account as /admin) ─────────────────────
+function LoginForm() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-type Filter = OrderStatus | 'all'
-
-const FILTERS: { value: Filter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'pending', label: 'Awaiting Payment' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
-]
-
-const STAFF_PASSWORD = 'semericafe'
-
-export default function OrdersPage() {
-  const [authed, setAuthed] = useState(false)
-  const [pw, setPw] = useState('')
-  const [pwError, setPwError] = useState(false)
-  const [orders, setOrders] = useState<Order[]>([])
-  const [filter, setFilter] = useState<Filter>('all')
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (sessionStorage.getItem('staff_authed') === '1') setAuthed(true)
-  }, [])
-
-  const submitPassword = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (pw === STAFF_PASSWORD) {
-      sessionStorage.setItem('staff_authed', '1')
-      setAuthed(true)
-    } else {
-      setPwError(true)
-      setPw('')
-    }
+  const submit = async () => {
+    setBusy(true); setError('')
+    const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password })
+    setBusy(false)
+    if (error) setError(error.message)
   }
-
-  useEffect(() => {
-    if (!authed) return
-    fetch('/api/orders')
-      .then(r => r.json())
-      .then(data => {
-        setOrders(data ?? [])
-        setLoading(false)
-      })
-
-    const channel = getSupabase()
-      .channel('orders-dashboard')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        payload => {
-          if (payload.eventType === 'INSERT') {
-            setOrders(prev => [payload.new as Order, ...prev])
-          } else if (payload.eventType === 'UPDATE') {
-            setOrders(prev =>
-              prev.map(o => (o.id === (payload.new as Order).id ? (payload.new as Order) : o))
-            )
-          }
-        }
-      )
-      .subscribe()
-
-    return () => { getSupabase().removeChannel(channel) }
-  }, [authed])
-
-  if (!authed) {
-    return (
-      <main className="min-h-screen bg-[#f6e7d7] flex items-center justify-center">
-        <form onSubmit={submitPassword} className="bg-white rounded-2xl p-8 shadow-md flex flex-col items-center gap-4 w-72">
-          <Image src="/logo.png" alt="Lazy Orchard Café" width={52} height={52} />
-          <p className="text-[#1e3a5f] font-bold text-sm">Staff Access</p>
-          <input
-            type="password"
-            value={pw}
-            onChange={e => { setPw(e.target.value); setPwError(false) }}
-            placeholder="Password"
-            autoFocus
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8fafee]"
-          />
-          {pwError && <p className="text-red-500 text-xs">Incorrect password</p>}
-          <button
-            type="submit"
-            className="w-full bg-[#8fafee] text-[#1e3a5f] font-semibold text-sm py-2 rounded-lg hover:bg-[#7a9ee0] transition-colors"
-          >
-            Enter
-          </button>
-        </form>
-      </main>
-    )
+  const field: React.CSSProperties = {
+    width: '100%', boxSizing: 'border-box', fontFamily: SANS, fontSize: 15,
+    padding: '11px 14px', borderRadius: 12, border: `1px solid ${C.rule}`, outline: 'none',
   }
-
-  const updateStatus = async (id: string, status: OrderStatus) => {
-    await fetch(`/api/orders/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    })
-  }
-
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
-
-  const activeCounts = {
-    pending: orders.filter(o => o.status === 'pending').length,
-    paid: orders.filter(o => o.status === 'paid').length,
-  }
-
   return (
-    <main className="min-h-screen bg-[#f6e7d7]">
-      <header className="bg-[#8fafee] px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="Lazy Orchard Café" width={52} height={52} priority />
-          <div>
-            <p className="text-[#1e3a5f] text-sm font-bold">Orders Dashboard</p>
-            <p className="text-[#4a6fa8] text-xs">
-            {activeCounts.pending > 0 && `${activeCounts.pending} awaiting payment · `}
-            {activeCounts.paid > 0 && `${activeCounts.paid} to prepare`}
-            {activeCounts.pending === 0 && activeCounts.paid === 0 && 'All clear'}
-          </p>
-          </div>
-        </div>
-        <Link href="/" className="text-[#4a6fa8] hover:text-[#1e3a5f] text-sm underline underline-offset-2">
-          ← Menu
-        </Link>
-      </header>
-
-      <div className="px-4 pt-4 flex gap-2 flex-wrap max-w-4xl mx-auto">
-        {FILTERS.map(f => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              filter === f.value
-                ? 'bg-[#8fafee] text-[#1e3a5f]'
-                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-            }`}
-          >
-            {f.label}
-            {f.value !== 'all' && orders.filter(o => o.status === f.value).length > 0 && (
-              <span className="ml-1 opacity-70">
-                ({orders.filter(o => o.status === f.value).length})
-              </span>
-            )}
+    <main style={{ minHeight: '100vh', background: C.peach, display: 'flex',
+      alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: C.card, borderRadius: 22, padding: 26, width: '100%', maxWidth: 380,
+        boxShadow: '0 8px 24px rgba(30,58,95,0.1)' }}>
+        <h1 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy }}>Staff sign-in</h1>
+        <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, marginTop: 4, marginBottom: 18 }}>
+          Order queue · Lazy Orchard Café
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <input type="email" placeholder="Email" value={email} autoComplete="username"
+            onChange={e => setEmail(e.target.value)} style={field} />
+          <input type="password" placeholder="Password" value={password} autoComplete="current-password"
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !busy) submit() }} style={field} />
+          {error && <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.red }}>{error}</p>}
+          <button onClick={submit} disabled={busy || !email || !password}
+            style={{ padding: '12px 0', borderRadius: 999, border: 'none', background: C.navy,
+              color: C.peach, fontFamily: SANS, fontSize: 14, fontWeight: 700,
+              cursor: busy ? 'not-allowed' : 'pointer', opacity: busy || !email || !password ? 0.5 : 1 }}>
+            {busy ? 'Signing in…' : 'Sign in'}
           </button>
-        ))}
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-4 space-y-3">
-        {loading && (
-          <div className="text-center text-gray-400 py-20 text-sm">Loading orders…</div>
-        )}
-        {!loading && filtered.length === 0 && (
-          <div className="text-center text-gray-400 py-20 text-sm">No orders</div>
-        )}
-        {filtered.map(order => (
-          <div key={order.id} className="bg-white rounded-2xl p-5 shadow-sm">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  {order.ticket_code && (
-                    <span className="font-mono font-bold text-lg text-[#1e3a5f] tracking-widest">
-                      #{order.ticket_code}
-                    </span>
-                  )}
-                  <h3 className="font-bold text-gray-900">{order.customer_name}</h3>
-                </div>
-                <p className="text-xs text-gray-400">
-                  {new Date(order.created_at).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[order.status]}`}>
-                {STATUS_LABELS[order.status]}
-              </span>
-            </div>
-
-            <ul className="space-y-1 mb-3 border-t border-gray-50 pt-3">
-              {order.items.map((item, i) => (
-                <li key={i} className="flex justify-between text-sm text-gray-700">
-                  <span>
-                    <span className="font-medium">{item.quantity}×</span> {item.name}
-                  </span>
-                  <span className="text-gray-400">${(item.price * item.quantity).toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
-
-            {order.note && (
-              <p className="text-xs text-[#3a5f9e] bg-[#e8f0fd] rounded-lg px-3 py-2 mb-3">
-                📝 {order.note}
-              </p>
-            )}
-
-            <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-              <span className="font-bold text-[#1e3a5f]">${order.total.toFixed(2)}</span>
-              <div className="flex gap-2">
-                {order.status === 'pending' && (
-                  <>
-                    <button
-                      onClick={() => updateStatus(order.id, 'paid')}
-                      className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      Mark Paid
-                    </button>
-                    <button
-                      onClick={() => updateStatus(order.id, 'cancelled')}
-                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                )}
-                {order.status === 'paid' && (
-                  <button
-                    onClick={() => updateStatus(order.id, 'completed')}
-                    className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold rounded-lg transition-colors"
-                  >
-                    Complete ✓
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+        </div>
       </div>
     </main>
   )
+}
+
+type Filter = EventOrderStatus | 'all'
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'pending', label: 'To make' },
+  { value: 'made', label: 'Made' },
+  { value: 'all', label: 'All' },
+]
+
+// ── The live queue ──────────────────────────────────────────────────────────
+function Queue({ onSignOut }: { onSignOut: () => void }) {
+  const [event, setEvent] = useState<CafeEvent | null>(null)
+  const [orders, setOrders] = useState<EventOrder[]>([])
+  const [filter, setFilter] = useState<Filter>('pending')
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    const supa = getSupabase()
+    const { data: active } = await supa.from('events').select('*').eq('is_active', true).maybeSingle()
+    let ev = active as CafeEvent | null
+    if (!ev) {
+      const { data: latest } = await supa.from('events').select('*')
+        .order('date', { ascending: false }).limit(1).maybeSingle()
+      ev = latest as CafeEvent | null
+    }
+    setEvent(ev)
+    if (!ev) { setLoading(false); return }
+    const { data } = await supa.from('event_orders').select('*').eq('event_id', ev.id)
+      .order('created_at', { ascending: false })
+    setOrders((data ?? []) as EventOrder[])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!event) return
+    const supa = getSupabase()
+    const ch = supa.channel(`orders-queue-${event.id}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'event_orders', filter: `event_id=eq.${event.id}` }, load)
+      .subscribe()
+    return () => { supa.removeChannel(ch) }
+  }, [event, load])
+
+  const setStatus = async (id: string, status: EventOrderStatus) => {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))
+    await getSupabase().from('event_orders').update({ status }).eq('id', id)
+  }
+
+  const pendingCount = orders.filter(o => o.status === 'pending').length
+  const shown = filter === 'all' ? orders : orders.filter(o => o.status === filter)
+
+  return (
+    <main style={{ minHeight: '100vh', background: C.peach, paddingBottom: 40 }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: C.blue, padding: '12px 18px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: C.navy }}>Order queue</div>
+          <div style={{ fontFamily: SANS, fontSize: 12, color: C.blueDeep }}>
+            {event ? event.name : 'No event'} · {pendingCount} to make
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Link href="/admin" style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 600, color: C.navy,
+            textDecoration: 'none' }}>Admin →</Link>
+          <button onClick={onSignOut} style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600,
+            color: C.navy, background: 'rgba(255,255,255,0.4)', border: 'none', borderRadius: 999,
+            padding: '5px 12px', cursor: 'pointer' }}>Sign out</button>
+        </div>
+      </header>
+
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '16px 18px 0',
+        display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {FILTERS.map(f => {
+          const n = f.value === 'all' ? orders.length : orders.filter(o => o.status === f.value).length
+          return (
+            <button key={f.value} onClick={() => setFilter(f.value)}
+              style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 700, padding: '6px 14px', borderRadius: 999,
+                border: 'none', cursor: 'pointer',
+                background: filter === f.value ? C.navy : C.card,
+                color: filter === f.value ? C.peach : C.midBlue,
+                boxShadow: filter === f.value ? 'none' : `inset 0 0 0 1px ${C.rule}` }}>
+              {f.label}{n > 0 ? ` (${n})` : ''}
+            </button>
+          )
+        })}
+      </div>
+
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '16px 18px 0',
+        display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {loading ? (
+          <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink3, textAlign: 'center', padding: '40px 0' }}>Loading…</p>
+        ) : shown.length === 0 ? (
+          <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink3, textAlign: 'center', padding: '40px 0' }}>
+            {filter === 'pending' ? 'No orders to make — all caught up ☕' : 'No orders.'}
+          </p>
+        ) : shown.map(o => {
+          const made = o.status === 'made'
+          return (
+            <div key={o.id} style={{ background: C.card, borderRadius: 16, padding: '14px 16px',
+              boxShadow: '0 2px 12px rgba(30,58,95,0.08)', display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', gap: 12, opacity: made ? 0.6 : 1 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: SERIF, fontSize: 17, color: C.navy,
+                  textDecoration: made ? 'line-through' : 'none' }}>{o.label}</div>
+                <div style={{ fontFamily: SANS, fontSize: 12.5, color: C.midBlue, marginTop: 2 }}>
+                  {o.guest_name} · {o.item_type === 'builder' ? 'build-your-own' : 'specialty'} · {timeAgo(o.created_at)}
+                </div>
+              </div>
+              {made ? (
+                <button onClick={() => setStatus(o.id, 'pending')} style={{ flexShrink: 0, fontFamily: SANS,
+                  fontSize: 12.5, fontWeight: 600, padding: '8px 14px', borderRadius: 999,
+                  border: `1px solid ${C.rule}`, background: 'transparent', color: C.midBlue, cursor: 'pointer' }}>
+                  Undo
+                </button>
+              ) : (
+                <button onClick={() => setStatus(o.id, 'made')} style={{ flexShrink: 0, fontFamily: SANS,
+                  fontSize: 13, fontWeight: 700, padding: '9px 16px', borderRadius: 999, border: 'none',
+                  background: C.green, color: C.card, cursor: 'pointer' }}>
+                  Mark made
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </main>
+  )
+}
+
+export default function OrdersPage() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const supa = getSupabase()
+    supa.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true) })
+    const { data: sub } = supa.auth.onAuthStateChange((_e, s) => setSession(s))
+    return () => sub.subscription.unsubscribe()
+  }, [])
+
+  if (!ready) {
+    return (
+      <main style={{ minHeight: '100vh', background: C.peach, display: 'flex',
+        alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink3 }}>Loading…</p>
+      </main>
+    )
+  }
+  if (!session) return <LoginForm />
+  return <Queue onSignOut={() => getSupabase().auth.signOut()} />
 }
