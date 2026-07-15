@@ -25,9 +25,9 @@ insert into public.events (slug, name, date, description, is_active)
 values (
   'vol-2',
   'Lazy Orchard Vol. 2',
-  '2026-09-20',                      -- <-- set the real date
-  'Replace with your event subtitle',  -- <-- your subtitle
-  false                             -- activated in step 4 (commented out)
+  '2026-07-25',                      -- event date
+  'Replace with your event subtitle',  -- <-- fill in your subtitle
+  false                             -- activated in step 4
 )
 on conflict (slug) do update
   set name = excluded.name,
@@ -94,6 +94,6 @@ where e.slug = 'vol-2'
   );
 
 -- 4. Go live -------------------------------------------------------------------
---    UNCOMMENT once your real items are in. Atomically makes Vol. 2 the only
---    active event (homepage shows it) and deactivates all others.
--- update public.events set is_active = (slug = 'vol-2');
+--    Atomically makes Vol. 2 the only active event (homepage shows it) and
+--    deactivates all others.
+update public.events set is_active = (slug = 'vol-2');
