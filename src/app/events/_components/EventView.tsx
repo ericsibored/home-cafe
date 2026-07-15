@@ -185,9 +185,27 @@ function Specialties({ items, orderable, onOrder }: {
 }
 
 // ── Build Your Own (constrained step picker) ────────────────────────────────
+// Flavor-based tints for build-your-own chips (first match wins; order matters
+// so e.g. "Oat Milk" hits oat before the generic milk/cream rule).
+type Tint = { soft: string; strong: string; border: string; fg: string }
+const FLAVOR_TINTS: { match: RegExp; tint: Tint }[] = [
+  { match: /matcha/i,                          tint: { soft: '#e4efd6', strong: '#bfe0a0', border: '#8cbf63', fg: '#3c5a20' } },
+  { match: /oat/i,                             tint: { soft: '#efe6d2', strong: '#ddc99e', border: '#c0a878', fg: '#5a4a2e' } },
+  { match: /espresso|coffee|hojicha|chestnut/i, tint: { soft: '#e9ddd0', strong: '#cdac86', border: '#a9784f', fg: '#5a3a1e' } },
+  { match: /blueberry|blue/i,                  tint: { soft: '#dce5f6', strong: '#a9c1ec', border: '#6f8fd0', fg: '#2a3f6e' } },
+  { match: /strawberry|rose|lychee/i,          tint: { soft: '#f6dde3', strong: '#eeb0bf', border: '#d97a92', fg: '#7a2a3f' } },
+  { match: /brown sugar|caramel|thai/i,        tint: { soft: '#eee0cc', strong: '#dcc094', border: '#bf9c5e', fg: '#5e421e' } },
+  { match: /vanilla|cream|whipped|milk|fairlife/i, tint: { soft: '#f3ece0', strong: '#e6d7bd', border: '#cbb896', fg: '#5a4e38' } },
+]
+function flavorTint(name: string): Tint {
+  return FLAVOR_TINTS.find(t => t.match.test(name))?.tint
+    ?? { soft: C.pale, strong: C.blue, border: C.blueHover, fg: C.navy }
+}
+
 function OptionChip({ name, selected, available, onClick }: {
   name: string; selected: boolean; available: boolean; onClick: () => void
 }) {
+  const t = flavorTint(name)
   return (
     <button
       onClick={available ? onClick : undefined}
@@ -195,11 +213,12 @@ function OptionChip({ name, selected, available, onClick }: {
       style={{
         fontFamily: SANS, fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 999,
         cursor: available ? 'pointer' : 'not-allowed',
-        border: `1.5px solid ${selected ? C.blue : C.rule}`,
-        background: selected ? C.blue : C.card,
-        color: available ? (selected ? C.navy : C.midBlue) : C.ink3,
+        border: `1.5px solid ${!available ? C.rule : selected ? t.border : 'transparent'}`,
+        background: !available ? C.card : selected ? t.strong : t.soft,
+        color: available ? t.fg : C.ink3,
         opacity: available ? 1 : 0.5,
         textDecoration: available ? 'none' : 'line-through',
+        boxShadow: selected && available ? `0 1px 4px ${t.border}66` : 'none',
         display: 'inline-flex', alignItems: 'center', gap: 6,
       }}>
       {name}
