@@ -2,61 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import type { Session } from '@supabase/supabase-js'
-import { getSupabase } from '@/lib/supabase'
 import { C, SERIF, SANS } from '@/lib/theme'
-import type { CafeEvent, EventOrder, EventOrderStatus } from '@/types'
+import { staffHeaders } from '@/lib/staff'
+import { PasswordGate } from '@/app/_components/PasswordGate'
+import type { EventOrder, EventOrderStatus } from '@/types'
 
 function timeAgo(iso: string): string {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
   if (s < 60) return 'just now'
   if (s < 3600) return `${Math.floor(s / 60)}m ago`
   return `${Math.floor(s / 3600)}h ago`
-}
-
-// ── Login gate (Supabase Auth — same account as /admin) ─────────────────────
-function LoginForm() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const submit = async () => {
-    setBusy(true); setError('')
-    const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password })
-    setBusy(false)
-    if (error) setError(error.message)
-  }
-  const field: React.CSSProperties = {
-    width: '100%', boxSizing: 'border-box', fontFamily: SANS, fontSize: 15,
-    padding: '11px 14px', borderRadius: 12, border: `1px solid ${C.rule}`, outline: 'none',
-  }
-  return (
-    <main style={{ minHeight: '100vh', background: C.peach, display: 'flex',
-      alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: C.card, borderRadius: 22, padding: 26, width: '100%', maxWidth: 380,
-        boxShadow: '0 8px 24px rgba(30,58,95,0.1)' }}>
-        <h1 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy }}>Staff sign-in</h1>
-        <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, marginTop: 4, marginBottom: 18 }}>
-          Order queue · Lazy Orchard Café
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input type="email" placeholder="Email" value={email} autoComplete="username"
-            onChange={e => setEmail(e.target.value)} style={field} />
-          <input type="password" placeholder="Password" value={password} autoComplete="current-password"
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !busy) submit() }} style={field} />
-          {error && <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.red }}>{error}</p>}
-          <button onClick={submit} disabled={busy || !email || !password}
-            style={{ padding: '12px 0', borderRadius: 999, border: 'none', background: C.navy,
-              color: C.peach, fontFamily: SANS, fontSize: 14, fontWeight: 700,
-              cursor: busy ? 'not-allowed' : 'pointer', opacity: busy || !email || !password ? 0.5 : 1 }}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </div>
-      </div>
-    </main>
-  )
 }
 
 type Filter = EventOrderStatus | 'all'
@@ -66,45 +21,38 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
 ]
 
-// ── The live queue ──────────────────────────────────────────────────────────
+// ── The live queue (polls the staff API) ────────────────────────────────────
 function Queue({ onSignOut }: { onSignOut: () => void }) {
-  const [event, setEvent] = useState<CafeEvent | null>(null)
+  const [eventName, setEventName] = useState<string | null>(null)
   const [orders, setOrders] = useState<EventOrder[]>([])
   const [filter, setFilter] = useState<Filter>('pending')
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const supa = getSupabase()
-    const { data: active } = await supa.from('events').select('*').eq('is_active', true).maybeSingle()
-    let ev = active as CafeEvent | null
-    if (!ev) {
-      const { data: latest } = await supa.from('events').select('*')
-        .order('date', { ascending: false }).limit(1).maybeSingle()
-      ev = latest as CafeEvent | null
-    }
-    setEvent(ev)
-    if (!ev) { setLoading(false); return }
-    const { data } = await supa.from('event_orders').select('*').eq('event_id', ev.id)
-      .order('created_at', { ascending: false })
-    setOrders((data ?? []) as EventOrder[])
+    try {
+      const res = await fetch('/api/event-orders', { headers: staffHeaders, cache: 'no-store' })
+      const body = await res.json()
+      if (res.ok) {
+        setEventName(body.event?.name ?? null)
+        setOrders((body.orders ?? []) as EventOrder[])
+      }
+    } catch {}
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
-
   useEffect(() => {
-    if (!event) return
-    const supa = getSupabase()
-    const ch = supa.channel(`orders-queue-${event.id}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'event_orders', filter: `event_id=eq.${event.id}` }, load)
-      .subscribe()
-    return () => { supa.removeChannel(ch) }
-  }, [event, load])
+    load()
+    const iv = setInterval(load, 4000)               // live-ish without exposing orders to anon
+    const onFocus = () => { if (document.visibilityState !== 'hidden') load() }
+    document.addEventListener('visibilitychange', onFocus)
+    window.addEventListener('focus', onFocus)
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onFocus); window.removeEventListener('focus', onFocus) }
+  }, [load])
 
   const setStatus = async (id: string, status: EventOrderStatus) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))
-    await getSupabase().from('event_orders').update({ status }).eq('id', id)
+    await fetch('/api/event-orders', { method: 'PATCH', headers: staffHeaders, body: JSON.stringify({ id, status }) })
+    load()
   }
 
   const pendingCount = orders.filter(o => o.status === 'pending').length
@@ -117,7 +65,7 @@ function Queue({ onSignOut }: { onSignOut: () => void }) {
         <div>
           <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: C.navy }}>Order queue</div>
           <div style={{ fontFamily: SANS, fontSize: 12, color: C.blueDeep }}>
-            {event ? event.name : 'No event'} · {pendingCount} to make
+            {eventName ?? 'No event'} · {pendingCount} to make
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -189,24 +137,9 @@ function Queue({ onSignOut }: { onSignOut: () => void }) {
 }
 
 export default function OrdersPage() {
-  const [session, setSession] = useState<Session | null>(null)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const supa = getSupabase()
-    supa.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true) })
-    const { data: sub } = supa.auth.onAuthStateChange((_e, s) => setSession(s))
-    return () => sub.subscription.unsubscribe()
-  }, [])
-
-  if (!ready) {
-    return (
-      <main style={{ minHeight: '100vh', background: C.peach, display: 'flex',
-        alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink3 }}>Loading…</p>
-      </main>
-    )
-  }
-  if (!session) return <LoginForm />
-  return <Queue onSignOut={() => getSupabase().auth.signOut()} />
+  return (
+    <PasswordGate title="Staff access" subtitle="Order queue · Lazy Orchard Café">
+      {signOut => <Queue onSignOut={signOut} />}
+    </PasswordGate>
+  )
 }

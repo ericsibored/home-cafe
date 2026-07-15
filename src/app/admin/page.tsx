@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import type { Session } from '@supabase/supabase-js'
 import { getSupabase } from '@/lib/supabase'
 import { C, SERIF, SANS } from '@/lib/theme'
-import type { CafeEvent, EventOrder, MenuItemRow, BuilderOption } from '@/types'
+import { staffHeaders } from '@/lib/staff'
+import { PasswordGate } from '@/app/_components/PasswordGate'
+import type { EventOrder, MenuItemRow, BuilderOption } from '@/types'
+
+type AdminEvent = { id: string; name: string; date: string; is_active: boolean }
 
 function timeAgo(iso: string): string {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -14,53 +17,6 @@ function timeAgo(iso: string): string {
   return `${Math.floor(s / 3600)}h ago`
 }
 
-// ── Login gate ──────────────────────────────────────────────────────────────
-function LoginForm({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const submit = async () => {
-    setBusy(true); setError('')
-    const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password })
-    setBusy(false)
-    if (error) { setError(error.message); return }
-    onLogin()
-  }
-
-  const field: React.CSSProperties = {
-    width: '100%', boxSizing: 'border-box', fontFamily: SANS, fontSize: 15,
-    padding: '11px 14px', borderRadius: 12, border: `1px solid ${C.rule}`, outline: 'none',
-  }
-
-  return (
-    <main style={{ minHeight: '100vh', background: C.peach, display: 'flex',
-      alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: C.card, borderRadius: 22, padding: 26, width: '100%', maxWidth: 380,
-        boxShadow: '0 8px 24px rgba(30,58,95,0.1)' }}>
-        <h1 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy }}>Host sign-in</h1>
-        <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, marginTop: 4, marginBottom: 18 }}>
-          Lazy Orchard Café admin
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input type="email" placeholder="Email" value={email} autoComplete="username"
-            onChange={e => setEmail(e.target.value)} style={field} />
-          <input type="password" placeholder="Password" value={password} autoComplete="current-password"
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !busy) submit() }} style={field} />
-          {error && <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.red }}>{error}</p>}
-          <button onClick={submit} disabled={busy || !email || !password}
-            style={{ padding: '12px 0', borderRadius: 999, border: 'none', background: C.navy,
-              color: C.peach, fontFamily: SANS, fontSize: 14, fontWeight: 700,
-              cursor: busy ? 'not-allowed' : 'pointer', opacity: busy || !email || !password ? 0.5 : 1 }}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </div>
-      </div>
-    </main>
-  )
-}
 
 // ── Toggle pill ─────────────────────────────────────────────────────────────
 function Toggle({ on, onLabel, offLabel, onClick }: {
@@ -80,60 +36,48 @@ function Toggle({ on, onLabel, offLabel, onClick }: {
 
 // ── Dashboard ───────────────────────────────────────────────────────────────
 function Dashboard({ onSignOut }: { onSignOut: () => void }) {
-  const [event, setEvent] = useState<CafeEvent | null>(null)
+  const [event, setEvent] = useState<AdminEvent | null>(null)
   const [orders, setOrders] = useState<EventOrder[]>([])
   const [menuItems, setMenuItems] = useState<MenuItemRow[]>([])
   const [builder, setBuilder] = useState<BuilderOption[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const supa = getSupabase()
-    const { data: active } = await supa.from('events').select('*').eq('is_active', true).maybeSingle()
-    let ev = active as CafeEvent | null
-    if (!ev) {
-      const { data: latest } = await supa.from('events').select('*')
-        .order('date', { ascending: false }).limit(1).maybeSingle()
-      ev = latest as CafeEvent | null
-    }
+    // Orders come through the staff API (service role); menus are public read.
+    const res = await fetch('/api/event-orders', { headers: staffHeaders, cache: 'no-store' })
+    const body = await res.json().catch(() => ({}))
+    const ev = (body.event ?? null) as AdminEvent | null
     setEvent(ev)
-    if (!ev) { setLoading(false); return }
-    const [o, mi, bo] = await Promise.all([
-      supa.from('event_orders').select('*').eq('event_id', ev.id).eq('status', 'pending')
-        .order('created_at', { ascending: true }),
+    setOrders(((body.orders ?? []) as EventOrder[]).filter(o => o.status === 'pending'))
+    if (!ev) { setMenuItems([]); setBuilder([]); setLoading(false); return }
+    const supa = getSupabase()
+    const [mi, bo] = await Promise.all([
       supa.from('menu_items').select('*').eq('event_id', ev.id).order('sort_order', { ascending: true }),
       supa.from('builder_options').select('*').eq('event_id', ev.id)
         .order('category', { ascending: true }).order('sort_order', { ascending: true }),
     ])
-    setOrders((o.data ?? []) as EventOrder[])
     setMenuItems((mi.data ?? []) as MenuItemRow[])
     setBuilder((bo.data ?? []) as BuilderOption[])
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
-
-  // Live order feed for the active event.
   useEffect(() => {
-    if (!event) return
-    const supa = getSupabase()
-    const ch = supa.channel(`admin-${event.id}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'event_orders', filter: `event_id=eq.${event.id}` }, load)
-      .subscribe()
-    return () => { supa.removeChannel(ch) }
-  }, [event, load])
+    load()
+    const iv = setInterval(load, 4000)   // poll the staff order feed
+    return () => clearInterval(iv)
+  }, [load])
 
   const markMade = async (id: string) => {
-    await getSupabase().from('event_orders').update({ status: 'made' }).eq('id', id)
     setOrders(prev => prev.filter(o => o.id !== id))
+    await fetch('/api/event-orders', { method: 'PATCH', headers: staffHeaders, body: JSON.stringify({ id, status: 'made' }) })
   }
   const toggleSoldOut = async (item: MenuItemRow) => {
-    await getSupabase().from('menu_items').update({ sold_out: !item.sold_out }).eq('id', item.id)
     setMenuItems(prev => prev.map(m => m.id === item.id ? { ...m, sold_out: !m.sold_out } : m))
+    await fetch('/api/menu-items', { method: 'PATCH', headers: staffHeaders, body: JSON.stringify({ id: item.id, sold_out: !item.sold_out }) })
   }
   const toggleAvailable = async (opt: BuilderOption) => {
-    await getSupabase().from('builder_options').update({ available: !opt.available }).eq('id', opt.id)
     setBuilder(prev => prev.map(b => b.id === opt.id ? { ...b, available: !b.available } : b))
+    await fetch('/api/builder-options', { method: 'PATCH', headers: staffHeaders, body: JSON.stringify({ id: opt.id, available: !opt.available }) })
   }
 
   const card: React.CSSProperties = {
@@ -243,26 +187,9 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function AdminPage() {
-  const [session, setSession] = useState<Session | null>(null)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const supa = getSupabase()
-    supa.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true) })
-    const { data: sub } = supa.auth.onAuthStateChange((_e, s) => setSession(s))
-    return () => sub.subscription.unsubscribe()
-  }, [])
-
-  if (!ready) {
-    return (
-      <main style={{ minHeight: '100vh', background: C.peach, display: 'flex',
-        alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink3 }}>Loading…</p>
-      </main>
-    )
-  }
-
-  if (!session) return <LoginForm onLogin={() => { /* session arrives via onAuthStateChange */ }} />
-
-  return <Dashboard onSignOut={() => getSupabase().auth.signOut()} />
+  return (
+    <PasswordGate title="Host access" subtitle="Admin · Lazy Orchard Café">
+      {signOut => <Dashboard onSignOut={signOut} />}
+    </PasswordGate>
+  )
 }
