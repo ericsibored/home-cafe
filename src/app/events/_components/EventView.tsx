@@ -19,7 +19,7 @@ function formatEventDate(iso: string): string {
 // The in-progress order the guest is about to place.
 type OrderDraft =
   | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[] }
-  | { type: 'builder'; base: string; syrup: string; modifier: string | null }
+  | { type: 'builder'; base: string; milk: string | null; syrup: string | null; modifier: string | null }
 
 // ── Specialty card ──────────────────────────────────────────────────────────
 function Tag({ children }: { children: React.ReactNode }) {
@@ -211,14 +211,16 @@ function OptionChip({ name, selected, available, onClick }: {
 function BuildYourOwn({ options, orderable, onOrder }: {
   options: BuilderOption[]
   orderable: boolean
-  onOrder: (draft: { base: string; syrup: string; modifier: string | null }) => void
+  onOrder: (draft: { base: string; milk: string | null; syrup: string | null; modifier: string | null }) => void
 }) {
   const byCat = (cat: BuilderCategory) => options.filter(o => o.category === cat)
   const bases = byCat('base')
+  const milks = byCat('milk')
   const syrups = byCat('syrup')
   const modifiers = byCat('modifier')
 
   const [base, setBase] = useState<string | null>(null)
+  const [milk, setMilk] = useState<string | null>(null)
   const [syrup, setSyrup] = useState<string | null>(null)
   const [modifier, setModifier] = useState<string | null>(null)
 
@@ -243,7 +245,20 @@ function BuildYourOwn({ options, orderable, onOrder }: {
     )
   }
 
-  const complete = !!(base && syrup)
+  // Only the categories present for this event, numbered in order. Base, milk
+  // and syrup (when offered) are required; modifier is always optional.
+  const stepDefs = [
+    { label: 'Base', hint: 'choose one', opts: bases, sel: base, set: setBase, optional: false },
+    { label: 'Milk', hint: 'choose one', opts: milks, sel: milk, set: setMilk, optional: false },
+    { label: 'Syrup', hint: 'choose one', opts: syrups, sel: syrup, set: setSyrup, optional: false },
+    { label: 'Modifier', hint: 'optional', opts: modifiers, sel: modifier, set: setModifier, optional: true },
+  ].filter(s => s.opts.length > 0)
+
+  const complete = !!base
+    && (milks.length === 0 || !!milk)
+    && (syrups.length === 0 || !!syrup)
+
+  const parts = [base, milk, syrup, modifier].filter(Boolean)
 
   return (
     <section>
@@ -251,12 +266,12 @@ function BuildYourOwn({ options, orderable, onOrder }: {
         Build your own
       </h2>
       <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, marginBottom: 16 }}>
-        Pick a base, choose a syrup, add an optional modifier.
+        Pick a base and build your drink from there.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {step('1 · Base', 'choose one', bases, base, setBase)}
-        {step('2 · Syrup', 'choose one', syrups, syrup, setSyrup)}
-        {step('3 · Modifier', 'optional', modifiers, modifier, setModifier, true)}
+        {stepDefs.map((s, i) => (
+          <div key={s.label}>{step(`${i + 1} · ${s.label}`, s.hint, s.opts, s.sel, s.set, s.optional)}</div>
+        ))}
       </div>
 
       <div style={{ marginTop: 18, background: C.card, borderRadius: 16, padding: '14px 16px',
@@ -266,13 +281,11 @@ function BuildYourOwn({ options, orderable, onOrder }: {
           <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
             color: C.midBlue, marginBottom: 4 }}>Your drink</div>
           <div style={{ fontFamily: SERIF, fontSize: 16, color: complete ? C.navy : C.ink3 }}>
-            {complete
-              ? `${base} + ${syrup}${modifier ? ` + ${modifier}` : ''}`
-              : 'Pick a base and a syrup to build your drink'}
+            {complete ? parts.join(' + ') : 'Choose your options to build a drink'}
           </div>
         </div>
         {orderable && complete && (
-          <OrderButton onClick={() => onOrder({ base: base!, syrup: syrup!, modifier })}>
+          <OrderButton onClick={() => onOrder({ base: base!, milk, syrup, modifier })}>
             Order this drink
           </OrderButton>
         )}
@@ -297,7 +310,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
 
   const title = draft.type === 'specialty'
     ? draft.name
-    : `${draft.base} + ${draft.syrup}${draft.modifier ? ` + ${draft.modifier}` : ''}`
+    : [draft.base, draft.milk, draft.syrup, draft.modifier].filter(Boolean).join(' + ')
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(30,58,95,0.35)',
@@ -481,7 +494,7 @@ export function EventView({
     setPlaceError('')
     setDraft({ type: 'specialty', name: item.name, temps: item.details?.tempOptions ?? [] })
   }
-  const orderBuilder = (d: { base: string; syrup: string; modifier: string | null }) => {
+  const orderBuilder = (d: { base: string; milk: string | null; syrup: string | null; modifier: string | null }) => {
     setPlaceError('')
     setDraft({ type: 'builder', ...d })
   }
@@ -497,8 +510,13 @@ export function EventView({
       item_summary = { name: draft.name, ...(temp ? { temp } : {}) }
       label = `${draft.name}${temp ? ` (${temp})` : ''}`
     } else {
-      item_summary = { base: draft.base, syrup: draft.syrup, ...(draft.modifier ? { modifier: draft.modifier } : {}) }
-      label = `${draft.base} + ${draft.syrup}${draft.modifier ? ` + ${draft.modifier}` : ''}`
+      item_summary = {
+        base: draft.base,
+        ...(draft.milk ? { milk: draft.milk } : {}),
+        ...(draft.syrup ? { syrup: draft.syrup } : {}),
+        ...(draft.modifier ? { modifier: draft.modifier } : {}),
+      }
+      label = [draft.base, draft.milk, draft.syrup, draft.modifier].filter(Boolean).join(' + ')
     }
 
     // anon INSERT only — no .select() (guests can't read the orders table).

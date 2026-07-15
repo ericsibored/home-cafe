@@ -89,6 +89,7 @@ export interface EventOrderSummary {
   name?: string          // specialty
   temp?: 'hot' | 'iced'  // specialty
   base?: string          // builder
+  milk?: string          // builder
   syrup?: string         // builder
   modifier?: string      // builder
 }
@@ -113,7 +114,7 @@ export interface CollageEntry {
   created_at: string
 }
 
-export type BuilderCategory = 'base' | 'syrup' | 'modifier'
+export type BuilderCategory = 'base' | 'milk' | 'syrup' | 'modifier'
 
 // A row in builder_options — one choice in the "Build Your Own" matrix.
 export interface BuilderOption {

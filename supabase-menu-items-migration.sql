@@ -32,7 +32,7 @@ create index if not exists menu_items_event_idx
 create table if not exists public.builder_options (
   id          uuid primary key default gen_random_uuid(),
   event_id    uuid not null references public.events (id) on delete cascade,
-  category    text not null check (category in ('base', 'syrup', 'modifier')),
+  category    text not null check (category in ('base', 'milk', 'syrup', 'modifier')),
   name        text not null,
   available   boolean not null default true,
   sort_order  int not null default 0,
