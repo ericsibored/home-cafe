@@ -37,6 +37,90 @@ function fileToScaledDataUrl(file: File, max = 1200, quality = 0.85): Promise<st
   })
 }
 
+// In-page camera with a front/back flip control. Falls back to the native
+// capture input (handled by the caller) when getUserMedia is unavailable.
+function CameraModal({ onCapture, onClose, onUnavailable }: {
+  onCapture: (dataUrl: string) => void
+  onClose: () => void
+  onUnavailable: () => void
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const [facing, setFacing] = useState<'user' | 'environment'>('user')
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!navigator.mediaDevices?.getUserMedia) { onUnavailable(); return }
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 1280 } },
+      audio: false,
+    }).then(stream => {
+      if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.play().catch(() => {})
+      }
+      setReady(true)
+    }).catch(() => { if (!cancelled) onUnavailable() })
+    return () => {
+      cancelled = true
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+  }, [facing, onUnavailable])
+
+  const snap = () => {
+    const video = videoRef.current
+    if (!video || !video.videoWidth) return
+    const max = 1200
+    const scale = Math.min(1, max / Math.max(video.videoWidth, video.videoHeight))
+    const w = Math.round(video.videoWidth * scale)
+    const h = Math.round(video.videoHeight * scale)
+    const canvas = document.createElement('canvas')
+    canvas.width = w; canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    // Mirror selfies so the saved photo matches the mirrored preview.
+    if (facing === 'user') { ctx.translate(w, 0); ctx.scale(-1, 1) }
+    ctx.drawImage(video, 0, 0, w, h)
+    onCapture(canvas.toDataURL('image/jpeg', 0.85))
+  }
+
+  const roundBtn: React.CSSProperties = {
+    borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: SANS, fontWeight: 700,
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,25,40,0.92)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <video ref={videoRef} playsInline muted autoPlay
+          style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', borderRadius: 20, background: '#000',
+            transform: facing === 'user' ? 'scaleX(-1)' : 'none', display: 'block' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+          <button onClick={onClose} aria-label="Close camera"
+            style={{ ...roundBtn, width: 52, height: 52, fontSize: 18, background: 'rgba(255,255,255,0.15)', color: '#fff' }}>
+            ✕
+          </button>
+          <button onClick={snap} disabled={!ready} aria-label="Take photo"
+            style={{ ...roundBtn, width: 72, height: 72, background: '#fff', opacity: ready ? 1 : 0.4,
+              boxShadow: 'inset 0 0 0 4px rgba(15,25,40,0.9), inset 0 0 0 6px #fff' }} />
+          <button onClick={() => { setReady(false); setFacing(f => f === 'user' ? 'environment' : 'user') }}
+            aria-label="Switch camera"
+            style={{ ...roundBtn, width: 52, height: 52, fontSize: 20, background: 'rgba(255,255,255,0.15)', color: '#fff' }}>
+            🔄
+          </button>
+        </div>
+        <p style={{ fontFamily: SANS, fontSize: 12, color: 'rgba(255,255,255,0.65)', textAlign: 'center', marginTop: 10 }}>
+          {facing === 'user' ? 'Front camera' : 'Back camera'} · tap 🔄 to switch
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function Polaroid({ entry, i }: { entry: CollageEntry; i: number }) {
   return (
     <div style={{ background: C.card, padding: '10px 10px 16px', transform: ROTATIONS[i % ROTATIONS.length],
@@ -67,8 +151,16 @@ export default function WallPage() {
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
   const cameraRef = useRef<HTMLInputElement>(null)
   const libraryRef = useRef<HTMLInputElement>(null)
+
+  // If in-page camera access fails (denied / unsupported / not https),
+  // fall back to the native capture input.
+  const cameraUnavailable = useCallback(() => {
+    setCameraOpen(false)
+    cameraRef.current?.click()
+  }, [])
 
   const load = useCallback(async () => {
     const supa = getSupabase()
@@ -192,7 +284,7 @@ export default function WallPage() {
                 <>
                   {error && <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.red, marginBottom: 10 }}>{error}</p>}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button onClick={() => cameraRef.current?.click()} style={{ flex: '1 1 160px', padding: '14px 0',
+                    <button onClick={() => setCameraOpen(true)} style={{ flex: '1 1 160px', padding: '14px 0',
                       borderRadius: 999, border: 'none', background: C.navy, color: C.peach, fontFamily: SANS,
                       fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                       🤳 Take a photo
@@ -215,6 +307,14 @@ export default function WallPage() {
           )}
         </div>
       </div>
+
+      {cameraOpen && (
+        <CameraModal
+          onCapture={dataUrl => { setError(''); setCaptured(dataUrl); setCameraOpen(false) }}
+          onClose={() => setCameraOpen(false)}
+          onUnavailable={cameraUnavailable}
+        />
+      )}
 
       {/* Photos grouped by event */}
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '28px 18px 0' }}>
