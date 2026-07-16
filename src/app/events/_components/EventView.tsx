@@ -303,7 +303,7 @@ function BuildYourOwn({ options, orderable, onOrder }: {
           <div style={{ flex: '0 1 170px', display: 'flex', alignItems: 'center',
             justifyContent: 'center', margin: '0 auto' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/latte-anatomy.svg" alt="Anatomy of a home cafe latte: cream top, caffeine shot, milk choice, and syrup base layers"
+            <img src="/latte-anatomy.png" alt="Anatomy of a home cafe latte: cream top, caffeine shot, milk choice, and syrup base layers"
               style={{ width: '100%', maxWidth: 200, height: 'auto', display: 'block' }} />
           </div>
         </div>
