@@ -67,7 +67,8 @@ export default function WallPage() {
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const libraryRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     const supa = getSupabase()
@@ -153,7 +154,11 @@ export default function WallPage() {
                 Posting to {activeEvent.name}
               </div>
 
-              <input ref={fileRef} type="file" accept="image/*" capture="user"
+              {/* capture="user" opens the front-facing (selfie) camera; the
+                  capture-less input opens the photo library / camera roll. */}
+              <input ref={cameraRef} type="file" accept="image/*" capture="user"
+                onChange={onPick} style={{ display: 'none' }} />
+              <input ref={libraryRef} type="file" accept="image/*"
                 onChange={onPick} style={{ display: 'none' }} />
 
               {captured ? (
@@ -186,11 +191,18 @@ export default function WallPage() {
               ) : (
                 <>
                   {error && <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.red, marginBottom: 10 }}>{error}</p>}
-                  <button onClick={() => fileRef.current?.click()} style={{ width: '100%', padding: '14px 0',
-                    borderRadius: 999, border: 'none', background: C.navy, color: C.peach, fontFamily: SANS,
-                    fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-                    📷 Add a photo
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button onClick={() => cameraRef.current?.click()} style={{ flex: '1 1 160px', padding: '14px 0',
+                      borderRadius: 999, border: 'none', background: C.navy, color: C.peach, fontFamily: SANS,
+                      fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+                      🤳 Take a photo
+                    </button>
+                    <button onClick={() => libraryRef.current?.click()} style={{ flex: '1 1 160px', padding: '14px 0',
+                      borderRadius: 999, border: `1.5px solid ${C.navy}`, background: 'transparent', color: C.navy,
+                      fontFamily: SANS, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+                      🖼️ Camera roll
+                    </button>
+                  </div>
                   {done && <p style={{ fontFamily: SANS, fontSize: 13, color: C.green, textAlign: 'center', marginTop: 10 }}>
                     Added to the wall — thanks! ☕</p>}
                 </>
