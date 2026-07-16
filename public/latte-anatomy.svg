@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 430" font-family="Georgia, 'Times New Roman', serif">
+  <!-- Anatomy of a home cafe latte — layered cup with labels for each customization -->
+  <defs>
+    <clipPath id="cup">
+      <path d="M40 40 L60 400 Q60 412 74 412 L146 412 Q160 412 160 400 L180 40 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- layers inside the cup -->
+  <g clip-path="url(#cup)">
+    <!-- cream top -->
+    <rect x="30" y="36" width="160" height="110" fill="#f6efdf"/>
+    <path d="M30 140 Q60 132 90 140 T150 140 T210 140 L210 36 L30 36 Z" fill="#f2e8d2"/>
+    <!-- latte-art heart swirl -->
+    <path d="M110 70 q-18 -22 -34 -6 q-12 12 4 26 q14 12 30 22 q16 -10 30 -22 q16 -14 4 -26 q-16 -16 -34 6"
+      fill="none" stroke="#cfa96b" stroke-width="2.5" opacity="0.7"/>
+    <path d="M110 78 q-10 -12 -20 -3 q-8 7 2 16 q9 8 18 14 q9 -6 18 -14 q10 -9 2 -16 q-10 -9 -20 3"
+      fill="none" stroke="#cfa96b" stroke-width="1.5" opacity="0.5"/>
+
+    <!-- caffeine shot: matcha/espresso swirl band -->
+    <rect x="30" y="146" width="160" height="78" fill="#e9dcc6"/>
+    <path d="M30 158 q22 -10 44 0 t44 0 t44 0 t44 0 L206 176 q-22 10 -44 0 t-44 0 t-44 0 t-44 0 Z" fill="#8cbf63" opacity="0.85"/>
+    <path d="M30 176 q22 -10 44 0 t44 0 t44 0 t44 0 L206 194 q-22 10 -44 0 t-44 0 t-44 0 t-44 0 Z" fill="#a9784f" opacity="0.85"/>
+    <path d="M30 194 q22 -10 44 0 t44 0 t44 0 t44 0 L206 212 q-22 10 -44 0 t-44 0 t-44 0 t-44 0 Z" fill="#6f8f4a" opacity="0.7"/>
+    <path d="M30 210 q22 -10 44 0 t44 0 t44 0 t44 0 L206 226 q-22 10 -44 0 t-44 0 t-44 0 t-44 0 Z" fill="#8a5a32" opacity="0.6"/>
+
+    <!-- milk -->
+    <rect x="30" y="224" width="160" height="130" fill="#faf6ec"/>
+    <g stroke="#e5d9bf" stroke-width="0.8" opacity="0.6">
+      <line x1="30" y1="244" x2="200" y2="244"/><line x1="30" y1="268" x2="200" y2="268"/>
+      <line x1="30" y1="292" x2="200" y2="292"/><line x1="30" y1="316" x2="200" y2="316"/>
+      <line x1="30" y1="340" x2="200" y2="340"/>
+    </g>
+
+    <!-- syrup base -->
+    <path d="M30 354 q20 -8 40 0 t40 0 t40 0 t40 0 L200 416 L30 416 Z" fill="#d8a94e"/>
+    <g fill="#f3e0b6" opacity="0.8">
+      <circle cx="70" cy="380" r="2.4"/><circle cx="100" cy="394" r="2"/><circle cx="128" cy="376" r="2.6"/>
+      <circle cx="90" cy="404" r="1.8"/><circle cx="140" cy="398" r="2.2"/><circle cx="115" cy="386" r="1.6"/>
+    </g>
+  </g>
+
+  <!-- glass outline -->
+  <path d="M40 40 L60 400 Q60 412 74 412 L146 412 Q160 412 160 400 L180 40 Z"
+    fill="none" stroke="#3f3a33" stroke-width="3"/>
+  <ellipse cx="110" cy="40" rx="70" ry="14" fill="none" stroke="#3f3a33" stroke-width="3"/>
+
+  <!-- leader lines + labels -->
+  <g stroke="#3f3a33" stroke-width="1.4">
+    <line x1="150" y1="90" x2="212" y2="90"/>
+    <line x1="168" y1="185" x2="212" y2="185"/>
+    <line x1="158" y1="290" x2="212" y2="290"/>
+    <line x1="148" y1="385" x2="212" y2="385"/>
+  </g>
+  <g fill="#3f3a33">
+    <circle cx="150" cy="90" r="3.4"/><circle cx="168" cy="185" r="3.4"/>
+    <circle cx="158" cy="290" r="3.4"/><circle cx="148" cy="385" r="3.4"/>
+  </g>
+  <g fill="#3f3a33" font-size="15" font-weight="bold" letter-spacing="0.5">
+    <text x="218" y="86">CREAM</text><text x="218" y="102">TOP</text>
+    <text x="218" y="181">CAFFEINE</text><text x="218" y="197">SHOT</text>
+    <text x="218" y="286">MILK</text><text x="218" y="302">CHOICE</text>
+    <text x="218" y="381">SYRUP</text><text x="218" y="397">BASE</text>
+  </g>
+</svg>

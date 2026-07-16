@@ -292,10 +292,20 @@ function BuildYourOwn({ options, orderable, onOrder }: {
       {/* One distinct item: the whole builder in a white card like the specialties */}
       <div style={{ background: C.card, borderRadius: 18, padding: 18,
         boxShadow: '0 2px 12px rgba(30,58,95,0.09)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {stepDefs.map((s, i) => (
-            <div key={s.label}>{step(`${i + 1} · ${s.label}`, s.hint, s.opts, s.sel, s.set, s.optional)}</div>
-          ))}
+        {/* Steps on the left, anatomy illustration on the right (wraps below on
+            narrow screens) so the diagram lines up with the customizations. */}
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'stretch' }}>
+          <div style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {stepDefs.map((s, i) => (
+              <div key={s.label}>{step(`${i + 1} · ${s.label}`, s.hint, s.opts, s.sel, s.set, s.optional)}</div>
+            ))}
+          </div>
+          <div style={{ flex: '0 1 170px', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', margin: '0 auto' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/latte-anatomy.svg" alt="Anatomy of a home cafe latte: cream top, caffeine shot, milk choice, and syrup base layers"
+              style={{ width: '100%', maxWidth: 200, height: 'auto', display: 'block' }} />
+          </div>
         </div>
 
         <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.rule}`,
