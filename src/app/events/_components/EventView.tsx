@@ -113,14 +113,9 @@ function SpecialtyCard({ item, orderable, onOrder }: {
           {d.milkOptions && d.milkOptions.length > 0 && <Tag>🥛 {d.milkOptions.join(' / ')}</Tag>}
           {d.addOns && d.addOns.map(a => <Tag key={a}>+ {a}</Tag>)}
         </div>
-        {(d.calories || item.ingredients?.length || d.allergens) && (
+        {(item.ingredients?.length || d.allergens) && (
           <div style={{ marginTop: 2, paddingTop: 10, borderTop: `1px solid ${C.ruleSoft}`,
             display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {d.calories && (
-              <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5, color: C.ink2 }}>
-                <span>🔥</span><span>{d.calories} cal</span>
-              </div>
-            )}
             {item.ingredients && item.ingredients.length > 0 && (
               <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5, color: C.ink2 }}>
                 <span>🌿</span><span>Ingredients: {item.ingredients.join(', ')}</span>
