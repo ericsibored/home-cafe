@@ -19,7 +19,7 @@ function formatEventDate(iso: string): string {
 // The in-progress order the guest is about to place.
 type OrderDraft =
   | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[]; quantity: number }
-  | { type: 'builder'; base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null }
+  | { type: 'builder'; base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null; quantity: number }
 
 // ── Specialty card ──────────────────────────────────────────────────────────
 function Tag({ children }: { children: React.ReactNode }) {
@@ -244,7 +244,7 @@ function OptionChip({ name, selected, available, onClick }: {
 function BuildYourOwn({ options, orderable, onOrder }: {
   options: BuilderOption[]
   orderable: boolean
-  onOrder: (draft: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null }) => void
+  onOrder: (draft: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null; quantity: number }) => void
 }) {
   const byCat = (cat: BuilderCategory) => options.filter(o => o.category === cat)
   const bases = byCat('base')
@@ -258,6 +258,7 @@ function BuildYourOwn({ options, orderable, onOrder }: {
   const [syrup, setSyrup] = useState<string | null>(null)
   const [cream, setCream] = useState<string | null>(null)
   const [modifier, setModifier] = useState<string | null>(null)
+  const [qty, setQty] = useState(1)
 
   const step = (label: string, hint: string, opts: BuilderOption[],
     selected: string | null, onPick: (name: string | null) => void, optional = false) => {
@@ -332,15 +333,18 @@ function BuildYourOwn({ options, orderable, onOrder }: {
             </div>
           </div>
           {orderable && (
-            <button
-              onClick={complete ? () => onOrder({ base: base!, milk, syrup, cream, modifier }) : undefined}
-              disabled={!complete}
-              style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '10px 18px',
-                borderRadius: 999, background: C.navy, color: C.peach, border: 'none', flexShrink: 0,
-                cursor: complete ? 'pointer' : 'not-allowed', opacity: complete ? 1 : 0.45,
-                boxShadow: complete ? '0 2px 8px rgba(30,58,95,0.2)' : 'none' }}>
-              Order this drink
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <QtyStepper qty={qty} onChange={setQty} />
+              <button
+                onClick={complete ? () => onOrder({ base: base!, milk, syrup, cream, modifier, quantity: qty }) : undefined}
+                disabled={!complete}
+                style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '10px 18px',
+                  borderRadius: 999, background: C.navy, color: C.peach, border: 'none', flexShrink: 0,
+                  cursor: complete ? 'pointer' : 'not-allowed', opacity: complete ? 1 : 0.45,
+                  boxShadow: complete ? '0 2px 8px rgba(30,58,95,0.2)' : 'none' }}>
+                Order this drink
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -357,7 +361,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
   error: string
 }) {
   const [name, setName] = useState('')
-  const [qty, setQty] = useState(draft.type === 'specialty' ? draft.quantity : 1)
+  const [qty, setQty] = useState(draft.quantity)
   const multiTemp = draft.type === 'specialty' && draft.temps.length > 1
   const [temp, setTemp] = useState<'hot' | 'iced'>(
     draft.type === 'specialty' ? (draft.temps[0] ?? 'iced') : 'iced'
@@ -556,7 +560,7 @@ export function EventView({
     setPlaceError('')
     setDraft({ type: 'specialty', name: item.name, temps: item.details?.tempOptions ?? [], quantity })
   }
-  const orderBuilder = (d: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null }) => {
+  const orderBuilder = (d: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null; quantity: number }) => {
     setPlaceError('')
     setDraft({ type: 'builder', ...d })
   }
