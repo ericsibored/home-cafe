@@ -338,11 +338,12 @@ function BuildYourOwn({ options, orderable, onOrder }: {
 function OrderModal({ draft, onClose, onPlace, placing, error }: {
   draft: OrderDraft
   onClose: () => void
-  onPlace: (guestName: string, temp: 'hot' | 'iced' | null) => void
+  onPlace: (guestName: string, temp: 'hot' | 'iced' | null, quantity: number) => void
   placing: boolean
   error: string
 }) {
   const [name, setName] = useState('')
+  const [qty, setQty] = useState(1)
   const multiTemp = draft.type === 'specialty' && draft.temps.length > 1
   const [temp, setTemp] = useState<'hot' | 'iced'>(
     draft.type === 'specialty' ? (draft.temps[0] ?? 'iced') : 'iced'
@@ -354,10 +355,10 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(30,58,95,0.35)',
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 0 }}>
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: C.card, width: '100%', maxWidth: 460,
-        borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: '22px 20px 28px',
-        boxShadow: '0 -8px 30px rgba(30,58,95,0.2)' }}>
+        borderRadius: 24, padding: '22px 20px 28px',
+        boxShadow: '0 12px 40px rgba(30,58,95,0.25)' }}>
         <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
           color: C.midBlue }}>Order</div>
         <div style={{ fontFamily: SERIF, fontSize: 22, color: C.navy, marginTop: 4 }}>{title}</div>
@@ -381,11 +382,32 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
         )}
 
         <div style={{ marginTop: 16 }}>
+          <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: C.midBlue, marginBottom: 6 }}>
+            Quantity
+          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 0, background: C.pale,
+            borderRadius: 999, padding: 3 }}>
+            <button onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1} aria-label="Decrease quantity"
+              style={{ width: 34, height: 34, borderRadius: 999, border: 'none', cursor: qty <= 1 ? 'not-allowed' : 'pointer',
+                background: 'transparent', color: qty <= 1 ? C.ink3 : C.navy, fontFamily: SANS, fontSize: 18, fontWeight: 700 }}>
+              −
+            </button>
+            <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 700, color: C.navy,
+              minWidth: 34, textAlign: 'center' }}>{qty}</span>
+            <button onClick={() => setQty(q => Math.min(9, q + 1))} disabled={qty >= 9} aria-label="Increase quantity"
+              style={{ width: 34, height: 34, borderRadius: 999, border: 'none', cursor: qty >= 9 ? 'not-allowed' : 'pointer',
+                background: 'transparent', color: qty >= 9 ? C.ink3 : C.navy, fontFamily: SANS, fontSize: 18, fontWeight: 700 }}>
+              +
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
           <label style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: C.midBlue,
             display: 'block', marginBottom: 6 }}>Your name</label>
           <input autoFocus value={name} onChange={e => setName(e.target.value)}
             placeholder="e.g. Sam"
-            onKeyDown={e => { if (e.key === 'Enter' && name.trim() && !placing) onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null)) }}
+            onKeyDown={e => { if (e.key === 'Enter' && name.trim() && !placing) onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty) }}
             style={{ width: '100%', boxSizing: 'border-box', fontFamily: SANS, fontSize: 15,
               padding: '11px 14px', borderRadius: 12, border: `1px solid ${C.rule}`, outline: 'none' }} />
         </div>
@@ -397,7 +419,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
             border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SANS, fontSize: 14,
             fontWeight: 600, color: C.midBlue, cursor: 'pointer' }}>Cancel</button>
           <button
-            onClick={() => onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null))}
+            onClick={() => onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty)}
             disabled={!name.trim() || placing}
             style={{ flex: 2, padding: '12px 0', borderRadius: 999, border: 'none',
               background: C.navy, color: C.peach, fontFamily: SANS, fontSize: 14, fontWeight: 700,
@@ -539,7 +561,7 @@ export function EventView({
     setDraft({ type: 'builder', ...d })
   }
 
-  const placeOrder = async (guestName: string, temp: 'hot' | 'iced' | null) => {
+  const placeOrder = async (guestName: string, temp: 'hot' | 'iced' | null, quantity: number) => {
     if (!draft || !guestName) return
     setPlacing(true)
     setPlaceError('')
@@ -558,6 +580,10 @@ export function EventView({
         ...(draft.modifier ? { modifier: draft.modifier } : {}),
       }
       label = [draft.base, draft.milk, draft.syrup, draft.cream, draft.modifier].filter(Boolean).join(' + ')
+    }
+    if (quantity > 1) {
+      item_summary.quantity = quantity
+      label = `${label} × ${quantity}`
     }
 
     // anon INSERT only — no .select() (guests can't read the orders table).

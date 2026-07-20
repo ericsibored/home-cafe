@@ -93,6 +93,7 @@ export interface EventOrderSummary {
   syrup?: string         // builder
   cream?: string         // builder
   modifier?: string      // builder
+  quantity?: number      // both; absent = 1
 }
 
 export interface EventOrder {
