@@ -64,7 +64,7 @@ function SpecialtyCard({ item, orderable, onOrder }: {
   item: MenuItemRow; orderable: boolean; onOrder: (item: MenuItemRow, quantity: number) => void
 }) {
   const d = item.details ?? {}
-  const [qty, setQty] = useState(1)
+  const [qty, setQty] = useState(0)
   const soldOut = item.sold_out
   const temp = tempLabel(d.tempOptions)
   const hasAllergens = !!d.allergens && d.allergens.length > 0
@@ -145,11 +145,12 @@ function SpecialtyCard({ item, orderable, onOrder }: {
         {orderable && !soldOut && (
           <div style={{ marginTop: 'auto', paddingTop: 12, display: 'flex', alignItems: 'center',
             gap: 8, flexWrap: 'wrap' }}>
-            <QtyStepper qty={qty} onChange={setQty} size={32} />
-            <button onClick={() => onOrder(item, qty)} style={{
+            <QtyStepper qty={qty} onChange={setQty} min={0} size={32} />
+            <button onClick={qty > 0 ? () => onOrder(item, qty) : undefined} disabled={qty === 0} style={{
               flex: 1, minWidth: 84, fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '9px 14px',
-              borderRadius: 999, background: C.navy, color: C.peach, border: 'none', cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(30,58,95,0.2)' }}>
+              borderRadius: 999, background: C.navy, color: C.peach, border: 'none',
+              cursor: qty === 0 ? 'not-allowed' : 'pointer', opacity: qty === 0 ? 0.45 : 1,
+              boxShadow: qty === 0 ? 'none' : '0 2px 8px rgba(30,58,95,0.2)' }}>
               Order
             </button>
           </div>
@@ -258,7 +259,7 @@ function BuildYourOwn({ options, orderable, onOrder }: {
   const [syrup, setSyrup] = useState<string | null>(null)
   const [cream, setCream] = useState<string | null>(null)
   const [modifier, setModifier] = useState<string | null>(null)
-  const [qty, setQty] = useState(1)
+  const [qty, setQty] = useState(0)
 
   const step = (label: string, hint: string, opts: BuilderOption[],
     selected: string | null, onPick: (name: string | null) => void, optional = false) => {
@@ -293,6 +294,8 @@ function BuildYourOwn({ options, orderable, onOrder }: {
 
   // Base is required; milk too when offered. Syrup / cream / modifier are optional.
   const complete = !!base && (milks.length === 0 || !!milk)
+  // Ordering also needs a quantity of at least one.
+  const canOrder = complete && qty > 0
 
   const parts = [base, milk, syrup, cream, modifier].filter(Boolean)
 
@@ -334,14 +337,14 @@ function BuildYourOwn({ options, orderable, onOrder }: {
           </div>
           {orderable && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <QtyStepper qty={qty} onChange={setQty} />
+              <QtyStepper qty={qty} onChange={setQty} min={0} />
               <button
-                onClick={complete ? () => onOrder({ base: base!, milk, syrup, cream, modifier, quantity: qty }) : undefined}
-                disabled={!complete}
+                onClick={canOrder ? () => onOrder({ base: base!, milk, syrup, cream, modifier, quantity: qty }) : undefined}
+                disabled={!canOrder}
                 style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '10px 18px',
                   borderRadius: 999, background: C.navy, color: C.peach, border: 'none', flexShrink: 0,
-                  cursor: complete ? 'pointer' : 'not-allowed', opacity: complete ? 1 : 0.45,
-                  boxShadow: complete ? '0 2px 8px rgba(30,58,95,0.2)' : 'none' }}>
+                  cursor: canOrder ? 'pointer' : 'not-allowed', opacity: canOrder ? 1 : 0.45,
+                  boxShadow: canOrder ? '0 2px 8px rgba(30,58,95,0.2)' : 'none' }}>
                 Order this drink
               </button>
             </div>
