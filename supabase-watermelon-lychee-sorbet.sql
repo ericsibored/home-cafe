@@ -2,8 +2,9 @@
 -- Add Watermelon Lychee Sorbet (Food) to Lazy Orchard Vol. 2.
 -- Run in the Supabase SQL editor. Idempotent — re-running won't duplicate.
 --
--- Picture is TBD: the emoji tile renders until a photo is added. When ready,
--- drop the file in public/menu/ and set details.image to "/menu/<file>".
+-- Picture is TBD: a placeholder illustration ships at
+-- public/menu/watermelon-lychee-sorbet.svg. When the real photo is ready,
+-- drop it in public/menu/ and update details.image to point at it.
 -- ============================================================================
 
 insert into public.menu_items
@@ -16,7 +17,7 @@ select
   false,
   'Food',
   coalesce((select max(mi.sort_order) + 1 from public.menu_items mi where mi.event_id = e.id), 0),
-  '{"emoji":"🍉","allergens":[]}'::jsonb
+  '{"emoji":"🍉","image":"/menu/watermelon-lychee-sorbet.svg","allergens":[]}'::jsonb
 from public.events e
 where e.slug = 'vol-2'
   and not exists (

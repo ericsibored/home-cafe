@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <!-- Placeholder tile for Watermelon Lychee Sorbet — swap for a real photo. -->
+  <rect width="400" height="300" fill="#fdeee4"/>
+
+  <!-- glass coupe -->
+  <path d="M130 150 L270 150 L252 210 Q248 222 236 222 L164 222 Q152 222 148 210 Z"
+    fill="#ffffff" stroke="#c9b8a6" stroke-width="3"/>
+  <rect x="196" y="222" width="8" height="26" fill="#c9b8a6"/>
+  <path d="M162 252 L238 252" stroke="#c9b8a6" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- sorbet scoops: watermelon pink + lychee cream -->
+  <circle cx="170" cy="128" r="34" fill="#f2808f"/>
+  <circle cx="230" cy="128" r="34" fill="#f7e8d8"/>
+  <circle cx="200" cy="104" r="32" fill="#ee6a7d"/>
+  <!-- watermelon seeds -->
+  <g fill="#5a3a3a">
+    <ellipse cx="190" cy="98" rx="2.5" ry="4" transform="rotate(-15 190 98)"/>
+    <ellipse cx="206" cy="108" rx="2.5" ry="4" transform="rotate(20 206 108)"/>
+    <ellipse cx="164" cy="122" rx="2.5" ry="4" transform="rotate(10 164 122)"/>
+    <ellipse cx="178" cy="138" rx="2.5" ry="4" transform="rotate(-25 178 138)"/>
+  </g>
+  <!-- highlights -->
+  <path d="M186 92 q8 -8 18 -4" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M222 118 q8 -6 16 -2" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- mint sprig -->
+  <path d="M232 84 q4 -14 16 -18" fill="none" stroke="#5e9b6b" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="252" cy="62" rx="9" ry="5" transform="rotate(-30 252 62)" fill="#79b585"/>
+  <ellipse cx="240" cy="72" rx="8" ry="4.5" transform="rotate(-55 240 72)" fill="#79b585"/>
+
+  <!-- caption -->
+  <text x="200" y="284" text-anchor="middle" font-family="Georgia, serif" font-style="italic"
+    font-size="15" fill="#a08b76">photo coming soon</text>
+</svg>
