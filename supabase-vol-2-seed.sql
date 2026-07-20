@@ -26,7 +26,7 @@ values (
   'vol-2',
   'Lazy Orchard Vol. 2',
   '2026-07-25',                      -- event date
-  'Replace with your event subtitle',  -- <-- fill in your subtitle
+  'Cheers to the friends that brought this collaboration to life',  -- event subtitle
   false                             -- activated in step 4
 )
 on conflict (slug) do update
