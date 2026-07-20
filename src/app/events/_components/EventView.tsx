@@ -643,6 +643,10 @@ export function EventView({
           <Link href="/wall" style={{ fontFamily: SANS, fontSize: 13, color: C.midBlue, textDecoration: 'none' }}>
             Photo wall 📸
           </Link>
+          {/* Password-gated — the link is public but the queue is not. */}
+          <Link href="/orders" style={{ fontFamily: SANS, fontSize: 13, color: C.ink3, textDecoration: 'none' }}>
+            Staff 🔒
+          </Link>
         </div>
         <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: C.ink3, marginTop: 10 }}>
           Lazy Orchard Café
