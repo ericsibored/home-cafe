@@ -168,7 +168,7 @@ function Specialties({ items, orderable, onOrder }: {
   const grouped = categories.length > 1 || (categories.length === 1 && categories[0] !== '')
 
   const grid = (list: MenuItemRow[]) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
       {list.map(item => <SpecialtyCard key={item.id} item={item} orderable={orderable} onOrder={onOrder} />)}
     </div>
   )
