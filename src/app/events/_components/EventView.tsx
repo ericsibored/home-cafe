@@ -18,7 +18,7 @@ function formatEventDate(iso: string): string {
 
 // The in-progress order the guest is about to place.
 type OrderDraft =
-  | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[] }
+  | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[]; quantity: number }
   | { type: 'builder'; base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null }
 
 // ── Specialty card ──────────────────────────────────────────────────────────
@@ -37,22 +37,34 @@ function tempLabel(temp?: ('hot' | 'iced')[]): string | null {
   return temp[0] === 'iced' ? '🧊 iced only' : '☕ hot only'
 }
 
-function OrderButton({ onClick, children = 'Order' }: { onClick: () => void; children?: React.ReactNode }) {
-  return (
-    <button onClick={onClick} style={{
-      fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 999,
-      background: C.navy, color: C.peach, border: 'none', cursor: 'pointer',
-      boxShadow: '0 2px 8px rgba(30,58,95,0.2)',
-    }}>
-      {children}
+// Ecommerce-style − / + quantity control, reused on the card and in the modal.
+function QtyStepper({ qty, onChange, min = 1, max = 9, size = 34 }: {
+  qty: number; onChange: (n: number) => void; min?: number; max?: number; size?: number
+}) {
+  const btn = (disabled: boolean, onClick: () => void, label: string, glyph: string) => (
+    <button onClick={onClick} disabled={disabled} aria-label={label}
+      style={{ width: size, height: size, borderRadius: 999, border: 'none',
+        cursor: disabled ? 'not-allowed' : 'pointer', background: 'transparent',
+        color: disabled ? C.ink3 : C.navy, fontFamily: SANS, fontSize: size * 0.53, fontWeight: 700,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+      {glyph}
     </button>
+  )
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', background: C.pale, borderRadius: 999, padding: 3 }}>
+      {btn(qty <= min, () => onChange(Math.max(min, qty - 1)), 'Decrease quantity', '−')}
+      <span style={{ fontFamily: SANS, fontSize: size * 0.44, fontWeight: 700, color: C.navy,
+        minWidth: size, textAlign: 'center' }}>{qty}</span>
+      {btn(qty >= max, () => onChange(Math.min(max, qty + 1)), 'Increase quantity', '+')}
+    </div>
   )
 }
 
 function SpecialtyCard({ item, orderable, onOrder }: {
-  item: MenuItemRow; orderable: boolean; onOrder: (item: MenuItemRow) => void
+  item: MenuItemRow; orderable: boolean; onOrder: (item: MenuItemRow, quantity: number) => void
 }) {
   const d = item.details ?? {}
+  const [qty, setQty] = useState(1)
   const soldOut = item.sold_out
   const temp = tempLabel(d.tempOptions)
   const hasAllergens = !!d.allergens && d.allergens.length > 0
@@ -131,8 +143,15 @@ function SpecialtyCard({ item, orderable, onOrder }: {
           </div>
         )}
         {orderable && !soldOut && (
-          <div style={{ marginTop: 6 }}>
-            <OrderButton onClick={() => onOrder(item)} />
+          <div style={{ marginTop: 'auto', paddingTop: 12, display: 'flex', alignItems: 'center',
+            gap: 8, flexWrap: 'wrap' }}>
+            <QtyStepper qty={qty} onChange={setQty} size={32} />
+            <button onClick={() => onOrder(item, qty)} style={{
+              flex: 1, minWidth: 84, fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '9px 14px',
+              borderRadius: 999, background: C.navy, color: C.peach, border: 'none', cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(30,58,95,0.2)' }}>
+              Order
+            </button>
           </div>
         )}
       </div>
@@ -142,7 +161,7 @@ function SpecialtyCard({ item, orderable, onOrder }: {
 
 // ── Specialties section ─────────────────────────────────────────────────────
 function Specialties({ items, orderable, onOrder }: {
-  items: MenuItemRow[]; orderable: boolean; onOrder: (item: MenuItemRow) => void
+  items: MenuItemRow[]; orderable: boolean; onOrder: (item: MenuItemRow, quantity: number) => void
 }) {
   const categories = useMemo(() => [...new Set(items.map(i => i.category ?? ''))], [items])
   const grouped = categories.length > 1 || (categories.length === 1 && categories[0] !== '')
@@ -338,7 +357,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
   error: string
 }) {
   const [name, setName] = useState('')
-  const [qty, setQty] = useState(1)
+  const [qty, setQty] = useState(draft.type === 'specialty' ? draft.quantity : 1)
   const multiTemp = draft.type === 'specialty' && draft.temps.length > 1
   const [temp, setTemp] = useState<'hot' | 'iced'>(
     draft.type === 'specialty' ? (draft.temps[0] ?? 'iced') : 'iced'
@@ -380,21 +399,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
           <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: C.midBlue, marginBottom: 6 }}>
             Quantity
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 0, background: C.pale,
-            borderRadius: 999, padding: 3 }}>
-            <button onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1} aria-label="Decrease quantity"
-              style={{ width: 34, height: 34, borderRadius: 999, border: 'none', cursor: qty <= 1 ? 'not-allowed' : 'pointer',
-                background: 'transparent', color: qty <= 1 ? C.ink3 : C.navy, fontFamily: SANS, fontSize: 18, fontWeight: 700 }}>
-              −
-            </button>
-            <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 700, color: C.navy,
-              minWidth: 34, textAlign: 'center' }}>{qty}</span>
-            <button onClick={() => setQty(q => Math.min(9, q + 1))} disabled={qty >= 9} aria-label="Increase quantity"
-              style={{ width: 34, height: 34, borderRadius: 999, border: 'none', cursor: qty >= 9 ? 'not-allowed' : 'pointer',
-                background: 'transparent', color: qty >= 9 ? C.ink3 : C.navy, fontFamily: SANS, fontSize: 18, fontWeight: 700 }}>
-              +
-            </button>
-          </div>
+          <QtyStepper qty={qty} onChange={setQty} />
         </div>
 
         <div style={{ marginTop: 16 }}>
@@ -547,9 +552,9 @@ export function EventView({
     }
   }, [event.id, event.is_active, refetch])
 
-  const orderSpecialty = (item: MenuItemRow) => {
+  const orderSpecialty = (item: MenuItemRow, quantity: number) => {
     setPlaceError('')
-    setDraft({ type: 'specialty', name: item.name, temps: item.details?.tempOptions ?? [] })
+    setDraft({ type: 'specialty', name: item.name, temps: item.details?.tempOptions ?? [], quantity })
   }
   const orderBuilder = (d: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null }) => {
     setPlaceError('')
