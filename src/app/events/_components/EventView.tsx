@@ -204,6 +204,8 @@ function Specialties({ items, orderable, onOrder }: {
 // so e.g. "Oat Milk" hits oat before the generic milk/cream rule).
 type Tint = { soft: string; strong: string; border: string; fg: string }
 const FLAVOR_TINTS: { match: RegExp; tint: Tint }[] = [
+  { match: /passionfruit|passion/i,            tint: { soft: '#fbf0cf', strong: '#f5dd93', border: '#e0b94a', fg: '#6b5212' } },
+  { match: /persimmon/i,                        tint: { soft: '#fbe2cc', strong: '#f3c088', border: '#dd8f3f', fg: '#7a3f14' } },
   { match: /matcha/i,                          tint: { soft: '#e4efd6', strong: '#bfe0a0', border: '#8cbf63', fg: '#3c5a20' } },
   { match: /oat/i,                             tint: { soft: '#efe6d2', strong: '#ddc99e', border: '#c0a878', fg: '#5a4a2e' } },
   { match: /espresso|coffee|hojicha|chestnut/i, tint: { soft: '#e9ddd0', strong: '#cdac86', border: '#a9784f', fg: '#5a3a1e' } },
