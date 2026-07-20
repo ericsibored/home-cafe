@@ -589,10 +589,16 @@ export function EventView({
       <header style={{ padding: '16px 18px 8px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, marginBottom: 14 }}>
-          <Link href="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
-            fontFamily: SANS, fontSize: 13, color: C.midBlue, textDecoration: 'none' }}>
-            {home ? 'Past events →' : '← All events'}
-          </Link>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 14 }}>
+            <Link href="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+              fontFamily: SANS, fontSize: 13, color: C.midBlue, textDecoration: 'none' }}>
+              {home ? 'Past events →' : '← All events'}
+            </Link>
+            {/* Password-gated — the link is public but the queue is not. */}
+            <Link href="/orders" style={{ fontFamily: SANS, fontSize: 13, color: C.ink3, textDecoration: 'none' }}>
+              Staff 🔒
+            </Link>
+          </div>
           <Link href="/wall" style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
             fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.navy, background: C.card,
             borderRadius: 999, padding: '6px 14px', textDecoration: 'none',
@@ -642,10 +648,6 @@ export function EventView({
           </a>
           <Link href="/wall" style={{ fontFamily: SANS, fontSize: 13, color: C.midBlue, textDecoration: 'none' }}>
             Photo wall 📸
-          </Link>
-          {/* Password-gated — the link is public but the queue is not. */}
-          <Link href="/orders" style={{ fontFamily: SANS, fontSize: 13, color: C.ink3, textDecoration: 'none' }}>
-            Staff 🔒
           </Link>
         </div>
         <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: C.ink3, marginTop: 10 }}>
