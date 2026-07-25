@@ -485,7 +485,7 @@ function TipCard({ amount, note }: { amount?: number | null; note?: string }) {
       boxShadow: '0 6px 20px rgba(30,58,95,0.12)', maxWidth: 380, width: '100%',
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
       <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: C.navy, textAlign: 'center' }}>
-        Tips fund the next syrup experiment ☕
+        Tips help fund and support home cafe R&amp;D ☕
       </div>
       <a href={buttonHref} {...anchorProps} style={{ display: 'flex', alignItems: 'center',
         justifyContent: 'center', gap: 8, width: '100%', boxSizing: 'border-box',
@@ -693,7 +693,7 @@ function Confirmation({ lines, guest, eventName, onDone }: {
       {/* Tip suggestions, calculated off the pre-discount subtotal */}
       <div style={{ marginTop: 24, maxWidth: 340, width: '100%' }}>
         <div style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, marginBottom: 10 }}>
-          Drinks are free — tips keep the syrup experiments coming ☕
+          Tips help fund and support home cafe R&amp;D ☕
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {TIP_PCTS.map(p => {
