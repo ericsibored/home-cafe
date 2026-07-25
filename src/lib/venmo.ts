@@ -9,6 +9,15 @@ export const VENMO_HANDLE = process.env.NEXT_PUBLIC_VENMO_USERNAME ?? 'MYHANDLE'
 export const venmoProfileUrl = (handle: string = VENMO_HANDLE) =>
   `https://venmo.com/u/${handle}`
 
-/** Mobile deep link that opens the Venmo pay screen for a charge. */
-export const venmoPayDeepLink = (handle: string = VENMO_HANDLE) =>
-  `venmo://paycharge?txn=pay&recipients=${handle}`
+/**
+ * Mobile deep link that opens the Venmo pay screen for a charge. An amount
+ * (and optional note) pre-fills the payment when supplied.
+ */
+export const venmoPayDeepLink = (
+  handle: string = VENMO_HANDLE, amount?: number, note?: string,
+) => {
+  const params = new URLSearchParams({ txn: 'pay', recipients: handle })
+  if (amount != null && amount > 0) params.set('amount', amount.toFixed(2))
+  if (note) params.set('note', note)
+  return `venmo://paycharge?${params.toString()}`
+}

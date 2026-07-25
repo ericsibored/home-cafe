@@ -470,12 +470,14 @@ function ItemModal({ draft, onClose, onAdd }: {
 }
 
 // ── Tip card (prominent, on the confirmation screen) ────────────────────────
-function TipCard() {
+function TipCard({ amount, note }: { amount?: number | null; note?: string }) {
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => { setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) }, [])
 
   // Mobile → open the Venmo app pay screen; desktop → web profile fallback.
-  const buttonHref = isMobile ? venmoPayDeepLink() : venmoProfileUrl()
+  const buttonHref = isMobile
+    ? venmoPayDeepLink(VENMO_HANDLE, amount ?? undefined, note)
+    : venmoProfileUrl()
   const anchorProps = isMobile ? {} : { target: '_blank', rel: 'noopener noreferrer' }
 
   return (
@@ -490,7 +492,8 @@ function TipCard() {
         padding: '15px 22px', borderRadius: 999, background: C.venmo, color: '#ffffff',
         fontFamily: SANS, fontWeight: 700, fontSize: 16, textDecoration: 'none',
         boxShadow: '0 4px 14px rgba(61,149,206,0.35)' }}>
-        Tip on <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20 }}>venmo</span>
+        Tip{amount ? ` $${amount.toFixed(2)}` : ''} on{' '}
+        <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20 }}>venmo</span>
       </a>
       <div style={{ fontFamily: SANS, fontSize: 12, color: C.ink3 }}>or scan to tip</div>
       <div style={{ background: '#ffffff', padding: 10, borderRadius: 14,
@@ -612,33 +615,106 @@ function CheckoutModal({ lines, onClose, onChangeQty, onRemove, onPlace, placing
   )
 }
 
-// ── Confirmation screen ─────────────────────────────────────────────────────
-function Confirmation({ lines, guest, onDone }: { lines: string[]; guest: string; onDone: () => void }) {
+// ── Confirmation screen (novelty receipt — everything is on the house) ───────
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+const TIP_PCTS = [15, 20, 25] as const
+
+function ReceiptRow({ left, right, muted, strong }: {
+  left: React.ReactNode; right: React.ReactNode; muted?: boolean; strong?: boolean
+}) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline',
+      fontFamily: MONO, fontSize: strong ? 14 : 12.5,
+      fontWeight: strong ? 700 : 400, color: muted ? C.ink3 : C.navy }}>
+      <span style={{ minWidth: 0, wordBreak: 'break-word' }}>{left}</span>
+      <span style={{ whiteSpace: 'nowrap' }}>{right}</span>
+    </div>
+  )
+}
+
+function Confirmation({ lines, guest, eventName, onDone }: {
+  lines: CartLine[]; guest: string; eventName: string; onDone: () => void
+}) {
+  const subtotal = cartTotal(lines)
+  const [tipPct, setTipPct] = useState<number>(20)
+  const tipAmount = subtotal * (tipPct / 100)
+  const dashed = `1px dashed ${C.rule}`
+
   return (
     <main style={{ minHeight: '100vh', background: C.peach, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', padding: '40px 24px', textAlign: 'center' }}>
+      alignItems: 'center', padding: '40px 24px 48px', textAlign: 'center' }}>
       <div style={{ width: 64, height: 64, borderRadius: 999, background: C.green, display: 'flex',
         alignItems: 'center', justifyContent: 'center', fontSize: 32, color: C.card }}>✓</div>
       <h1 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 28, color: C.navy, marginTop: 16 }}>
         Order placed!
       </h1>
-      <div style={{ marginTop: 16, background: C.card, borderRadius: 18, padding: '18px 22px',
-        boxShadow: '0 2px 12px rgba(30,58,95,0.09)', maxWidth: 380, width: '100%' }}>
-        <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
-          color: C.midBlue }}>Your order</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
-          {lines.map((l, i) => (
-            <div key={i} style={{ fontFamily: SERIF, fontSize: 17, color: C.navy }}>{l}</div>
-          ))}
-        </div>
-        <div style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, marginTop: 10 }}>for {guest}</div>
-      </div>
-      <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink2, marginTop: 18 }}>
+      <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink2, marginTop: 8 }}>
         We&apos;re making it now ☕ — listen for your name.
       </p>
 
-      {/* Prominent tip card */}
-      <TipCard />
+      {/* Receipt */}
+      <div style={{ marginTop: 22, background: C.card, borderRadius: 6, padding: '22px 20px',
+        boxShadow: '0 4px 16px rgba(30,58,95,0.12)', maxWidth: 340, width: '100%', textAlign: 'left' }}>
+        <div style={{ textAlign: 'center', paddingBottom: 12, borderBottom: dashed }}>
+          <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 17, color: C.navy }}>
+            Lazy Orchard Café
+          </div>
+          <div style={{ fontFamily: MONO, fontSize: 11, color: C.ink3, marginTop: 3 }}>
+            {eventName.toUpperCase()}
+          </div>
+          <div style={{ fontFamily: MONO, fontSize: 11, color: C.ink3, marginTop: 2 }}>
+            {guest} · {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '12px 0',
+          borderBottom: dashed }}>
+          {lines.map(l => (
+            <ReceiptRow key={l.key}
+              left={`${l.quantity}× ${l.label}`}
+              right={l.unitPrice !== null ? `$${(l.unitPrice * l.quantity).toFixed(2)}` : '—'} />
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '12px 0',
+          borderBottom: dashed }}>
+          <ReceiptRow left="Subtotal" right={`$${subtotal.toFixed(2)}`} />
+          <ReceiptRow left={'Friends & family discount'} right={`-$${subtotal.toFixed(2)}`} muted />
+        </div>
+
+        <div style={{ padding: '12px 0 4px' }}>
+          <ReceiptRow left="TOTAL" right="$0.00" strong />
+        </div>
+        <div style={{ fontFamily: MONO, fontSize: 10.5, color: C.ink3, textAlign: 'center', marginTop: 10 }}>
+          *** ON THE HOUSE — THANK YOU ***
+        </div>
+      </div>
+
+      {/* Tip suggestions, calculated off the pre-discount subtotal */}
+      <div style={{ marginTop: 24, maxWidth: 340, width: '100%' }}>
+        <div style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, marginBottom: 10 }}>
+          Drinks are free — tips keep the syrup experiments coming ☕
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {TIP_PCTS.map(p => {
+            const on = p === tipPct
+            return (
+              <button key={p} onClick={() => setTipPct(p)} style={{
+                flex: 1, padding: '10px 0', borderRadius: 14, cursor: 'pointer',
+                border: `1.5px solid ${on ? C.navy : C.rule}`,
+                background: on ? C.navy : C.card, color: on ? C.peach : C.navy,
+                fontFamily: SANS, fontWeight: 700, fontSize: 13, lineHeight: 1.3 }}>
+                <div>{p}%</div>
+                <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.85 }}>
+                  ${(subtotal * (p / 100)).toFixed(2)}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <TipCard amount={tipAmount} note={`Lazy Orchard Café — ${guest}`} />
 
       <button onClick={onDone} style={{ marginTop: 24, padding: '12px 28px', borderRadius: 999,
         background: 'transparent', color: C.midBlue, border: `1px solid ${C.rule}`, fontFamily: SANS,
@@ -667,7 +743,7 @@ export function EventView({
   const [checkingOut, setCheckingOut] = useState(false)
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState('')
-  const [placed, setPlaced] = useState<{ lines: string[]; guest: string } | null>(null)
+  const [placed, setPlaced] = useState<{ lines: CartLine[]; guest: string } | null>(null)
 
   const refetch = useCallback(async () => {
     const supa = getSupabase()
@@ -763,13 +839,14 @@ export function EventView({
     const { error } = await getSupabase().from('event_orders').insert(rows)
     setPlacing(false)
     if (error) { setPlaceError('Could not place your order. Please try again.'); return }
-    setPlaced({ lines: rows.map(r => r.label), guest: guestName })
+    setPlaced({ lines: cart, guest: guestName })
     setCart([])
     setCheckingOut(false)
   }
 
   if (placed) {
-    return <Confirmation lines={placed.lines} guest={placed.guest} onDone={() => setPlaced(null)} />
+    return <Confirmation lines={placed.lines} guest={placed.guest} eventName={event.name}
+      onDone={() => setPlaced(null)} />
   }
 
   const orderable = event.is_active
