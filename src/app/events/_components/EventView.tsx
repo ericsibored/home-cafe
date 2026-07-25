@@ -78,13 +78,12 @@ function SpecialtyCard({ item, orderable, onOrder }: {
   const [qty, setQty] = useState(0)
   const soldOut = item.sold_out
   const temp = tempLabel(d.tempOptions)
-  const hasAllergens = !!d.allergens && d.allergens.length > 0
   return (
     <div style={{ background: C.card, borderRadius: 18, overflow: 'hidden',
       boxShadow: '0 2px 12px rgba(30,58,95,0.09)', display: 'flex', flexDirection: 'column',
       opacity: soldOut ? 0.6 : 1, position: 'relative' }}>
       {d.image ? (
-        <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', flexShrink: 0,
+        <div style={{ width: '100%', aspectRatio: '3/4', overflow: 'hidden', flexShrink: 0,
           position: 'relative', background: C.surface }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={d.image} alt={item.name}
@@ -102,13 +101,13 @@ function SpecialtyCard({ item, orderable, onOrder }: {
           )}
         </div>
       ) : (
-        <div style={{ width: '100%', height: 100, background: C.peach, display: 'flex',
-          alignItems: 'center', justifyContent: 'center', fontSize: 48, flexShrink: 0,
+        <div style={{ width: '100%', aspectRatio: '3/4', background: C.peach, display: 'flex',
+          alignItems: 'center', justifyContent: 'center', fontSize: 60, flexShrink: 0,
           filter: soldOut ? 'grayscale(0.7)' : undefined }}>
           {d.emoji ?? '☕'}
         </div>
       )}
-      <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+      <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.navy,
@@ -136,25 +135,14 @@ function SpecialtyCard({ item, orderable, onOrder }: {
           {d.milkOptions && d.milkOptions.length > 0 && <Tag>🥛 {d.milkOptions.join(' / ')}</Tag>}
           {d.addOns && d.addOns.map(a => <Tag key={a}>+ {a}</Tag>)}
         </div>
-        {(item.ingredients?.length || d.allergens) && (
-          <div style={{ marginTop: 2, paddingTop: 10, borderTop: `1px solid ${C.ruleSoft}`,
-            display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {item.ingredients && item.ingredients.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5, color: C.ink2 }}>
-                <span>🌿</span><span>Ingredients: {item.ingredients.join(', ')}</span>
-              </div>
-            )}
-            {d.allergens && (
-              <div style={{ display: 'flex', gap: 8, fontFamily: SANS, fontSize: 11.5,
-                color: hasAllergens ? C.ink2 : C.green }}>
-                <span>{hasAllergens ? '⚠️' : '✅'}</span>
-                <span>{hasAllergens ? `Allergens: ${d.allergens.join(', ')}` : 'No common allergens'}</span>
-              </div>
-            )}
+        {item.ingredients && item.ingredients.length > 0 && (
+          <div style={{ paddingTop: 8, borderTop: `1px solid ${C.ruleSoft}`,
+            display: 'flex', gap: 6, fontFamily: SANS, fontSize: 11, color: C.ink2, lineHeight: 1.3 }}>
+            <span>🌿</span><span>{item.ingredients.join(', ')}</span>
           </div>
         )}
         {orderable && !soldOut && (
-          <div style={{ marginTop: 'auto', paddingTop: 12, display: 'flex', alignItems: 'center',
+          <div style={{ marginTop: 'auto', paddingTop: 10, display: 'flex', alignItems: 'center',
             gap: 8, flexWrap: 'wrap' }}>
             <QtyStepper qty={qty} onChange={setQty} min={0} size={32} />
             <button onClick={qty > 0 ? () => onOrder(item, qty) : undefined} disabled={qty === 0} style={{
