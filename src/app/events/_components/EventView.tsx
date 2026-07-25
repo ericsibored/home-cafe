@@ -7,7 +7,7 @@ import { getSupabase } from '@/lib/supabase'
 import { venmoProfileUrl, venmoPayDeepLink, VENMO_HANDLE } from '@/lib/venmo'
 import { C, SERIF, SANS } from '@/lib/theme'
 import type {
-  CafeEvent, MenuItemRow, BuilderOption, BuilderCategory, EventOrderSummary,
+  CafeEvent, MenuItemRow, BuilderOption, BuilderCategory, EventOrderSummary, OrderItemType,
 } from '@/types'
 
 function formatEventDate(iso: string): string {
@@ -18,8 +18,19 @@ function formatEventDate(iso: string): string {
 
 // The in-progress order the guest is about to place.
 type OrderDraft =
-  | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[]; quantity: number; addOnOptions: string[] }
-  | { type: 'builder'; base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null; quantity: number }
+  | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[]; quantity: number; addOnOptions: string[]; unitPrice: number | null }
+  | { type: 'builder'; base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null; quantity: number; unitPrice: number | null }
+
+// One configured item waiting in the cart. Quantity is kept separate from the
+// label so it can be edited at checkout.
+type CartLine = {
+  key: string
+  type: OrderItemType
+  label: string
+  summary: EventOrderSummary
+  quantity: number
+  unitPrice: number | null
+}
 
 // ── Specialty card ──────────────────────────────────────────────────────────
 function Tag({ children }: { children: React.ReactNode }) {
@@ -151,7 +162,7 @@ function SpecialtyCard({ item, orderable, onOrder }: {
               borderRadius: 999, background: C.navy, color: C.peach, border: 'none',
               cursor: qty === 0 ? 'not-allowed' : 'pointer', opacity: qty === 0 ? 0.45 : 1,
               boxShadow: qty === 0 ? 'none' : '0 2px 8px rgba(30,58,95,0.2)' }}>
-              Order
+              Add
             </button>
           </div>
         )}
@@ -353,7 +364,7 @@ function BuildYourOwn({ options, orderable, onOrder }: {
                   borderRadius: 999, background: C.navy, color: C.peach, border: 'none', flexShrink: 0,
                   cursor: canOrder ? 'pointer' : 'not-allowed', opacity: canOrder ? 1 : 0.45,
                   boxShadow: canOrder ? '0 2px 8px rgba(30,58,95,0.2)' : 'none' }}>
-                Order this drink
+                Add to order
               </button>
             </div>
           )}
@@ -363,16 +374,13 @@ function BuildYourOwn({ options, orderable, onOrder }: {
   )
 }
 
-// ── Order modal ─────────────────────────────────────────────────────────────
-function OrderModal({ draft, onClose, onPlace, placing, error }: {
+// ── Item modal (configure, then add to the cart) ─────────────────────────────
+function ItemModal({ draft, onClose, onAdd }: {
   draft: OrderDraft
   onClose: () => void
-  onPlace: (guestName: string, temp: 'hot' | 'iced' | null, quantity: number, addOns: string[]) => void
-  placing: boolean
-  error: string
+  onAdd: (temp: 'hot' | 'iced' | null, quantity: number, addOns: string[]) => void
 }) {
-  const [name, setName] = useState('')
-  const [qty, setQty] = useState(draft.quantity)
+  const [qty, setQty] = useState(Math.max(1, draft.quantity))
   const [addOns, setAddOns] = useState<string[]>([])
   const addOnOptions = draft.type === 'specialty' ? draft.addOnOptions : []
   const toggleAddOn = (a: string) =>
@@ -393,7 +401,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
         borderRadius: 24, padding: '22px 20px 28px',
         boxShadow: '0 12px 40px rgba(30,58,95,0.25)' }}>
         <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
-          color: C.midBlue }}>Order</div>
+          color: C.midBlue }}>Add to order</div>
         <div style={{ fontFamily: SERIF, fontSize: 22, color: C.navy, marginTop: 4 }}>{title}</div>
 
         {multiTemp && (
@@ -444,30 +452,16 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
           <QtyStepper qty={qty} onChange={setQty} />
         </div>
 
-        <div style={{ marginTop: 16 }}>
-          <label style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: C.midBlue,
-            display: 'block', marginBottom: 6 }}>Your name</label>
-          <input autoFocus value={name} onChange={e => setName(e.target.value)}
-            placeholder="e.g. Sam"
-            onKeyDown={e => { if (e.key === 'Enter' && name.trim() && !placing) onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty, addOns) }}
-            style={{ width: '100%', boxSizing: 'border-box', fontFamily: SANS, fontSize: 15,
-              padding: '11px 14px', borderRadius: 12, border: `1px solid ${C.rule}`, outline: 'none' }} />
-        </div>
-
-        {error && <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.red, marginTop: 10 }}>{error}</p>}
-
-        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '12px 0', borderRadius: 999,
             border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SANS, fontSize: 14,
             fontWeight: 600, color: C.midBlue, cursor: 'pointer' }}>Cancel</button>
           <button
-            onClick={() => onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty, addOns)}
-            disabled={!name.trim() || placing}
+            onClick={() => onAdd(multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty, addOns)}
             style={{ flex: 2, padding: '12px 0', borderRadius: 999, border: 'none',
               background: C.navy, color: C.peach, fontFamily: SANS, fontSize: 14, fontWeight: 700,
-              cursor: !name.trim() || placing ? 'not-allowed' : 'pointer',
-              opacity: !name.trim() || placing ? 0.5 : 1 }}>
-            {placing ? 'Placing…' : 'Place order'}
+              cursor: 'pointer' }}>
+            Add to order
           </button>
         </div>
       </div>
@@ -508,8 +502,118 @@ function TipCard() {
   )
 }
 
+// ── Cart ────────────────────────────────────────────────────────────────────
+function cartTotal(lines: CartLine[]): number {
+  return lines.reduce((sum, l) => sum + (l.unitPrice ?? 0) * l.quantity, 0)
+}
+
+// Sticky bar that appears once something is in the cart.
+function CartBar({ lines, onReview }: { lines: CartLine[]; onReview: () => void }) {
+  const count = lines.reduce((n, l) => n + l.quantity, 0)
+  return (
+    <div style={{ position: 'sticky', bottom: 0, zIndex: 30, padding: '10px 18px 14px',
+      background: 'linear-gradient(to top, rgba(253,238,228,0.98) 60%, rgba(253,238,228,0))' }}>
+      <button onClick={onReview} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 12, width: '100%', maxWidth: 640, margin: '0 auto', padding: '14px 20px', borderRadius: 999,
+        border: 'none', background: C.navy, color: C.peach, cursor: 'pointer',
+        boxShadow: '0 6px 20px rgba(30,58,95,0.28)' }}>
+        <span style={{ fontFamily: SANS, fontSize: 14, fontWeight: 700 }}>
+          🛒 {count} item{count === 1 ? '' : 's'}
+        </span>
+        <span style={{ fontFamily: SANS, fontSize: 14, fontWeight: 700 }}>
+          ${cartTotal(lines).toFixed(2)} · Review →
+        </span>
+      </button>
+    </div>
+  )
+}
+
+function CheckoutModal({ lines, onClose, onChangeQty, onRemove, onPlace, placing, error }: {
+  lines: CartLine[]
+  onClose: () => void
+  onChangeQty: (key: string, quantity: number) => void
+  onRemove: (key: string) => void
+  onPlace: (guestName: string) => void
+  placing: boolean
+  error: string
+}) {
+  const [name, setName] = useState('')
+  const ready = !!name.trim() && lines.length > 0 && !placing
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(30,58,95,0.35)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.card, width: '100%', maxWidth: 460,
+        maxHeight: '85vh', overflowY: 'auto', borderRadius: 24, padding: '22px 20px 28px',
+        boxShadow: '0 12px 40px rgba(30,58,95,0.25)' }}>
+        <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
+          color: C.midBlue }}>Your order</div>
+        <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22, color: C.navy, marginTop: 4 }}>
+          Review &amp; check out
+        </div>
+
+        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {lines.length === 0 && (
+            <p style={{ fontFamily: SANS, fontSize: 13, color: C.ink3 }}>Your order is empty.</p>
+          )}
+          {lines.map(l => (
+            <div key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 10,
+              paddingBottom: 12, borderBottom: `1px solid ${C.ruleSoft}` }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: SERIF, fontSize: 15, color: C.navy }}>{l.label}</div>
+                {l.unitPrice !== null && (
+                  <div style={{ fontFamily: SANS, fontSize: 12, color: C.ink3, marginTop: 2 }}>
+                    ${(l.unitPrice * l.quantity).toFixed(2)}
+                  </div>
+                )}
+              </div>
+              <QtyStepper qty={l.quantity} onChange={n => onChangeQty(l.key, n)} size={30} />
+              <button onClick={() => onRemove(l.key)} aria-label={`Remove ${l.label}`}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: C.ink3,
+                  fontSize: 16, padding: 4 }}>✕</button>
+            </div>
+          ))}
+        </div>
+
+        {lines.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14 }}>
+            <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.midBlue }}>Total</span>
+            <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 700, color: C.blueDeep }}>
+              ${cartTotal(lines).toFixed(2)}
+            </span>
+          </div>
+        )}
+
+        <div style={{ marginTop: 18 }}>
+          <label style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: C.midBlue,
+            display: 'block', marginBottom: 6 }}>Your name</label>
+          <input autoFocus value={name} onChange={e => setName(e.target.value)}
+            placeholder="e.g. Sam"
+            onKeyDown={e => { if (e.key === 'Enter' && ready) onPlace(name.trim()) }}
+            style={{ width: '100%', boxSizing: 'border-box', fontFamily: SANS, fontSize: 15,
+              padding: '11px 14px', borderRadius: 12, border: `1px solid ${C.rule}`, outline: 'none' }} />
+        </div>
+
+        {error && <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.red, marginTop: 10 }}>{error}</p>}
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '12px 0', borderRadius: 999,
+            border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SANS, fontSize: 14,
+            fontWeight: 600, color: C.midBlue, cursor: 'pointer' }}>Keep browsing</button>
+          <button onClick={() => onPlace(name.trim())} disabled={!ready}
+            style={{ flex: 2, padding: '12px 0', borderRadius: 999, border: 'none',
+              background: C.navy, color: C.peach, fontFamily: SANS, fontSize: 14, fontWeight: 700,
+              cursor: ready ? 'pointer' : 'not-allowed', opacity: ready ? 1 : 0.5 }}>
+            {placing ? 'Placing…' : 'Place order'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Confirmation screen ─────────────────────────────────────────────────────
-function Confirmation({ label, guest, onDone }: { label: string; guest: string; onDone: () => void }) {
+function Confirmation({ lines, guest, onDone }: { lines: string[]; guest: string; onDone: () => void }) {
   return (
     <main style={{ minHeight: '100vh', background: C.peach, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', padding: '40px 24px', textAlign: 'center' }}>
@@ -521,9 +625,13 @@ function Confirmation({ label, guest, onDone }: { label: string; guest: string; 
       <div style={{ marginTop: 16, background: C.card, borderRadius: 18, padding: '18px 22px',
         boxShadow: '0 2px 12px rgba(30,58,95,0.09)', maxWidth: 380, width: '100%' }}>
         <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
-          color: C.midBlue }}>Your drink</div>
-        <div style={{ fontFamily: SERIF, fontSize: 19, color: C.navy, marginTop: 4 }}>{label}</div>
-        <div style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, marginTop: 8 }}>for {guest}</div>
+          color: C.midBlue }}>Your order</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+          {lines.map((l, i) => (
+            <div key={i} style={{ fontFamily: SERIF, fontSize: 17, color: C.navy }}>{l}</div>
+          ))}
+        </div>
+        <div style={{ fontFamily: SANS, fontSize: 13, color: C.ink2, marginTop: 10 }}>for {guest}</div>
       </div>
       <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink2, marginTop: 18 }}>
         We&apos;re making it now ☕ — listen for your name.
@@ -553,11 +661,13 @@ export function EventView({
   const [menuItems, setMenuItems] = useState(initialItems)
   const [builderOptions, setBuilderOptions] = useState(initialOptions)
 
-  // Ordering flow state
+  // Ordering flow state: configure an item → cart → checkout.
   const [draft, setDraft] = useState<OrderDraft | null>(null)
+  const [cart, setCart] = useState<CartLine[]>([])
+  const [checkingOut, setCheckingOut] = useState(false)
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState('')
-  const [placed, setPlaced] = useState<{ label: string; guest: string } | null>(null)
+  const [placed, setPlaced] = useState<{ lines: string[]; guest: string } | null>(null)
 
   const refetch = useCallback(async () => {
     const supa = getSupabase()
@@ -597,26 +707,24 @@ export function EventView({
   const orderSpecialty = (item: MenuItemRow, quantity: number) => {
     setPlaceError('')
     setDraft({ type: 'specialty', name: item.name, temps: item.details?.tempOptions ?? [], quantity,
-      addOnOptions: item.details?.addOns ?? [] })
+      addOnOptions: item.details?.addOns ?? [], unitPrice: item.details?.price ?? null })
   }
   const orderBuilder = (d: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null; quantity: number }) => {
     setPlaceError('')
-    setDraft({ type: 'builder', ...d })
+    setDraft({ type: 'builder', ...d, unitPrice: BUILDER_PRICE })
   }
 
-  const placeOrder = async (guestName: string, temp: 'hot' | 'iced' | null, quantity: number, addOns: string[]) => {
-    if (!draft || !guestName) return
-    setPlacing(true)
-    setPlaceError('')
-
-    let item_summary: EventOrderSummary
+  // Turn the configured draft into a cart line.
+  const addToCart = (temp: 'hot' | 'iced' | null, quantity: number, addOns: string[]) => {
+    if (!draft) return
+    let summary: EventOrderSummary
     let label: string
     if (draft.type === 'specialty') {
-      item_summary = { name: draft.name, ...(temp ? { temp } : {}), ...(addOns.length ? { addOns } : {}) }
+      summary = { name: draft.name, ...(temp ? { temp } : {}), ...(addOns.length ? { addOns } : {}) }
       label = `${draft.name}${temp ? ` (${temp})` : ''}`
         + (addOns.length ? ` + ${addOns.join(' + ')}` : '')
     } else {
-      item_summary = {
+      summary = {
         base: draft.base,
         ...(draft.milk ? { milk: draft.milk } : {}),
         ...(draft.syrup ? { syrup: draft.syrup } : {}),
@@ -625,27 +733,43 @@ export function EventView({
       }
       label = [draft.base, draft.milk, draft.syrup, draft.cream, draft.modifier].filter(Boolean).join(' + ')
     }
-    if (quantity > 1) {
-      item_summary.quantity = quantity
-      label = `${label} × ${quantity}`
-    }
+    setCart(prev => [...prev, {
+      key: `${Date.now()}-${prev.length}`,
+      type: draft.type, label, summary, quantity, unitPrice: draft.unitPrice,
+    }])
+    setDraft(null)
+  }
+
+  const changeQty = (key: string, quantity: number) =>
+    setCart(prev => prev.map(l => l.key === key ? { ...l, quantity } : l))
+  const removeLine = (key: string) =>
+    setCart(prev => prev.filter(l => l.key !== key))
+
+  // One row per cart line, inserted together.
+  const placeOrder = async (guestName: string) => {
+    if (!guestName || cart.length === 0) return
+    setPlacing(true)
+    setPlaceError('')
+
+    const rows = cart.map(l => ({
+      event_id: event.id,
+      item_type: l.type,
+      item_summary: { ...l.summary, ...(l.quantity > 1 ? { quantity: l.quantity } : {}) },
+      label: l.quantity > 1 ? `${l.label} × ${l.quantity}` : l.label,
+      guest_name: guestName,
+    }))
 
     // anon INSERT only — no .select() (guests can't read the orders table).
-    const { error } = await getSupabase().from('event_orders').insert({
-      event_id: event.id,
-      item_type: draft.type,
-      item_summary,
-      label,
-      guest_name: guestName,
-    })
+    const { error } = await getSupabase().from('event_orders').insert(rows)
     setPlacing(false)
     if (error) { setPlaceError('Could not place your order. Please try again.'); return }
-    setDraft(null)
-    setPlaced({ label, guest: guestName })
+    setPlaced({ lines: rows.map(r => r.label), guest: guestName })
+    setCart([])
+    setCheckingOut(false)
   }
 
   if (placed) {
-    return <Confirmation label={placed.label} guest={placed.guest} onDone={() => setPlaced(null)} />
+    return <Confirmation lines={placed.lines} guest={placed.guest} onDone={() => setPlaced(null)} />
   }
 
   const orderable = event.is_active
@@ -725,8 +849,17 @@ export function EventView({
         </div>
       </footer>
 
+      {orderable && cart.length > 0 && (
+        <CartBar lines={cart} onReview={() => { setPlaceError(''); setCheckingOut(true) }} />
+      )}
+
       {draft && (
-        <OrderModal draft={draft} onClose={() => setDraft(null)} onPlace={placeOrder}
+        <ItemModal draft={draft} onClose={() => setDraft(null)} onAdd={addToCart} />
+      )}
+
+      {checkingOut && (
+        <CheckoutModal lines={cart} onClose={() => setCheckingOut(false)}
+          onChangeQty={changeQty} onRemove={removeLine} onPlace={placeOrder}
           placing={placing} error={placeError} />
       )}
     </main>
