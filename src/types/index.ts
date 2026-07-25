@@ -93,6 +93,7 @@ export interface EventOrderSummary {
   syrup?: string         // builder
   cream?: string         // builder
   modifier?: string      // builder
+  addOns?: string[]      // specialty; chosen extras
   quantity?: number      // both; absent = 1
 }
 

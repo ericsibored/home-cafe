@@ -18,7 +18,7 @@ function formatEventDate(iso: string): string {
 
 // The in-progress order the guest is about to place.
 type OrderDraft =
-  | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[]; quantity: number }
+  | { type: 'specialty'; name: string; temps: ('hot' | 'iced')[]; quantity: number; addOnOptions: string[] }
   | { type: 'builder'; base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null; quantity: number }
 
 // ── Specialty card ──────────────────────────────────────────────────────────
@@ -244,6 +244,9 @@ function OptionChip({ name, selected, available, onClick }: {
   )
 }
 
+// Every build-your-own drink is the same flat price.
+const BUILDER_PRICE = 7.5
+
 function BuildYourOwn({ options, orderable, onOrder }: {
   options: BuilderOption[]
   orderable: boolean
@@ -336,6 +339,9 @@ function BuildYourOwn({ options, orderable, onOrder }: {
             <div style={{ fontFamily: SERIF, fontSize: 16, color: complete ? C.navy : C.ink3 }}>
               {complete ? parts.join(' + ') : 'Choose your options to build a drink'}
             </div>
+            <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14, color: C.blueDeep, marginTop: 4 }}>
+              ${BUILDER_PRICE.toFixed(2)}
+            </div>
           </div>
           {orderable && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
@@ -361,12 +367,16 @@ function BuildYourOwn({ options, orderable, onOrder }: {
 function OrderModal({ draft, onClose, onPlace, placing, error }: {
   draft: OrderDraft
   onClose: () => void
-  onPlace: (guestName: string, temp: 'hot' | 'iced' | null, quantity: number) => void
+  onPlace: (guestName: string, temp: 'hot' | 'iced' | null, quantity: number, addOns: string[]) => void
   placing: boolean
   error: string
 }) {
   const [name, setName] = useState('')
   const [qty, setQty] = useState(draft.quantity)
+  const [addOns, setAddOns] = useState<string[]>([])
+  const addOnOptions = draft.type === 'specialty' ? draft.addOnOptions : []
+  const toggleAddOn = (a: string) =>
+    setAddOns(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
   const multiTemp = draft.type === 'specialty' && draft.temps.length > 1
   const [temp, setTemp] = useState<'hot' | 'iced'>(
     draft.type === 'specialty' ? (draft.temps[0] ?? 'iced') : 'iced'
@@ -404,6 +414,29 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
           </div>
         )}
 
+        {addOnOptions.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: C.midBlue, marginBottom: 6 }}>
+              Add-ons <span style={{ fontWeight: 400, color: C.ink3 }}>· optional</span>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {addOnOptions.map(a => {
+                const on = addOns.includes(a)
+                const t = flavorTint(a)
+                return (
+                  <button key={a} onClick={() => toggleAddOn(a)} style={{
+                    fontFamily: SANS, fontSize: 13, fontWeight: 600, padding: '7px 13px', borderRadius: 999,
+                    cursor: 'pointer', border: `1.5px solid ${on ? t.border : 'transparent'}`,
+                    background: on ? t.strong : t.soft, color: t.fg,
+                    boxShadow: on ? `0 1px 4px ${t.border}66` : 'none' }}>
+                    {on ? '✓ ' : '+ '}{a}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         <div style={{ marginTop: 16 }}>
           <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: C.midBlue, marginBottom: 6 }}>
             Quantity
@@ -416,7 +449,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
             display: 'block', marginBottom: 6 }}>Your name</label>
           <input autoFocus value={name} onChange={e => setName(e.target.value)}
             placeholder="e.g. Sam"
-            onKeyDown={e => { if (e.key === 'Enter' && name.trim() && !placing) onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty) }}
+            onKeyDown={e => { if (e.key === 'Enter' && name.trim() && !placing) onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty, addOns) }}
             style={{ width: '100%', boxSizing: 'border-box', fontFamily: SANS, fontSize: 15,
               padding: '11px 14px', borderRadius: 12, border: `1px solid ${C.rule}`, outline: 'none' }} />
         </div>
@@ -428,7 +461,7 @@ function OrderModal({ draft, onClose, onPlace, placing, error }: {
             border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SANS, fontSize: 14,
             fontWeight: 600, color: C.midBlue, cursor: 'pointer' }}>Cancel</button>
           <button
-            onClick={() => onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty)}
+            onClick={() => onPlace(name.trim(), multiTemp ? temp : (draft.type === 'specialty' ? (draft.temps[0] ?? null) : null), qty, addOns)}
             disabled={!name.trim() || placing}
             style={{ flex: 2, padding: '12px 0', borderRadius: 999, border: 'none',
               background: C.navy, color: C.peach, fontFamily: SANS, fontSize: 14, fontWeight: 700,
@@ -563,14 +596,15 @@ export function EventView({
 
   const orderSpecialty = (item: MenuItemRow, quantity: number) => {
     setPlaceError('')
-    setDraft({ type: 'specialty', name: item.name, temps: item.details?.tempOptions ?? [], quantity })
+    setDraft({ type: 'specialty', name: item.name, temps: item.details?.tempOptions ?? [], quantity,
+      addOnOptions: item.details?.addOns ?? [] })
   }
   const orderBuilder = (d: { base: string; milk: string | null; syrup: string | null; cream: string | null; modifier: string | null; quantity: number }) => {
     setPlaceError('')
     setDraft({ type: 'builder', ...d })
   }
 
-  const placeOrder = async (guestName: string, temp: 'hot' | 'iced' | null, quantity: number) => {
+  const placeOrder = async (guestName: string, temp: 'hot' | 'iced' | null, quantity: number, addOns: string[]) => {
     if (!draft || !guestName) return
     setPlacing(true)
     setPlaceError('')
@@ -578,8 +612,9 @@ export function EventView({
     let item_summary: EventOrderSummary
     let label: string
     if (draft.type === 'specialty') {
-      item_summary = { name: draft.name, ...(temp ? { temp } : {}) }
+      item_summary = { name: draft.name, ...(temp ? { temp } : {}), ...(addOns.length ? { addOns } : {}) }
       label = `${draft.name}${temp ? ` (${temp})` : ''}`
+        + (addOns.length ? ` + ${addOns.join(' + ')}` : '')
     } else {
       item_summary = {
         base: draft.base,
