@@ -29,14 +29,12 @@ function Queue({ onSignOut }: { onSignOut: () => void }) {
   const [orders, setOrders] = useState<EventOrder[]>([])
   const [filter, setFilter] = useState<Filter>('pending')
   const [loading, setLoading] = useState(true)
-  // Ticked-but-not-yet-confirmed items, by order id. Nothing is written until
-  // the ticket's confirm button is pressed.
+  // Tickets marked ready but not yet confirmed, by ticket key. Nothing is
+  // written until the ticket's confirm button is pressed.
   const [staged, setStaged] = useState<Record<string, boolean>>({})
 
-  const toggleStaged = (id: string) =>
-    setStaged(prev => ({ ...prev, [id]: !prev[id] }))
-  const stageAll = (ids: string[], on: boolean) =>
-    setStaged(prev => ({ ...prev, ...Object.fromEntries(ids.map(id => [id, on])) }))
+  const toggleStaged = (key: string) =>
+    setStaged(prev => ({ ...prev, [key]: !prev[key] }))
 
   const load = useCallback(async () => {
     try {
@@ -59,20 +57,9 @@ function Queue({ onSignOut }: { onSignOut: () => void }) {
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onFocus); window.removeEventListener('focus', onFocus) }
   }, [load])
 
-  const setStatus = async (id: string, status: EventOrderStatus) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))
-    await fetch('/api/event-orders', { method: 'PATCH', headers: staffHeaders, body: JSON.stringify({ id, status }) })
-    load()
-  }
-
-  // Update every item on a ticket at once, clearing their staged ticks.
+  // Update every item on a ticket at once.
   const setManyStatus = async (ids: string[], status: EventOrderStatus) => {
     setOrders(prev => prev.map(o => ids.includes(o.id) ? { ...o, status } : o))
-    setStaged(prev => {
-      const next = { ...prev }
-      for (const id of ids) delete next[id]
-      return next
-    })
     await Promise.all(ids.map(id => fetch('/api/event-orders', {
       method: 'PATCH', headers: staffHeaders, body: JSON.stringify({ id, status }),
     })))
@@ -131,9 +118,7 @@ function Queue({ onSignOut }: { onSignOut: () => void }) {
           const done = ticketStatus(t) === 'made'
           const ids = t.items.map(i => i.id)
           const remaining = t.items.filter(i => i.status === 'pending').length
-          const pendingIds = t.items.filter(i => i.status === 'pending').map(i => i.id)
-          const stagedIds = pendingIds.filter(id => staged[id])
-          const allStaged = pendingIds.length > 0 && stagedIds.length === pendingIds.length
+          const ready = !!staged[t.key]
           return (
             <div key={t.key} style={{ background: C.card, borderRadius: 16, padding: '14px 16px',
               boxShadow: '0 2px 12px rgba(30,58,95,0.08)', opacity: done ? 0.6 : 1 }}>
@@ -149,30 +134,13 @@ function Queue({ onSignOut }: { onSignOut: () => void }) {
 
               {/* Items — each can be ticked off on its own */}
               <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {t.items.map(o => {
-                  const made = o.status === 'made'
-                  const ticked = !made && !!staged[o.id]
-                  return (
-                    <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 10,
-                      justifyContent: 'space-between' }}>
-                      <div style={{ minWidth: 0, fontFamily: SANS, fontSize: 14,
-                        color: made ? C.ink3 : C.navy,
-                        textDecoration: made || ticked ? 'line-through' : 'none' }}>
-                        {o.label}
-                      </div>
-                      <button
-                        onClick={() => made ? setStatus(o.id, 'pending') : toggleStaged(o.id)}
-                        aria-label={made ? `Undo ${o.label}` : `Tick off ${o.label}`}
-                        aria-pressed={made || ticked}
-                        style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 999, cursor: 'pointer',
-                          border: made || ticked ? `1.5px solid ${C.green}` : `1.5px solid ${C.rule}`,
-                          background: made ? C.green : ticked ? 'rgba(62,155,107,0.15)' : 'transparent',
-                          color: made ? C.card : ticked ? C.green : C.midBlue, fontSize: 14, lineHeight: 1 }}>
-                        ✓
-                      </button>
-                    </div>
-                  )
-                })}
+                {t.items.map(o => (
+                  <div key={o.id} style={{ fontFamily: SANS, fontSize: 14,
+                    color: done || ready ? C.ink3 : C.navy,
+                    textDecoration: done || ready ? 'line-through' : 'none' }}>
+                    {o.label}
+                  </div>
+                ))}
               </div>
 
               <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.rule}`,
@@ -185,24 +153,21 @@ function Queue({ onSignOut }: { onSignOut: () => void }) {
                   </button>
                 ) : (
                   <>
-                    <button onClick={() => stageAll(pendingIds, !allStaged)} style={{ fontFamily: SANS,
-                      fontSize: 12.5, fontWeight: 600, padding: '8px 14px', borderRadius: 999,
-                      border: `1px solid ${C.rule}`, background: 'transparent', color: C.midBlue,
-                      cursor: 'pointer' }}>
-                      {allStaged ? 'Clear ticks' : 'Tick all'}
+                    <button onClick={() => toggleStaged(t.key)} aria-pressed={ready}
+                      style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 700, padding: '8px 14px',
+                        borderRadius: 999, cursor: 'pointer',
+                        border: `1.5px solid ${ready ? C.green : C.rule}`,
+                        background: ready ? 'rgba(62,155,107,0.15)' : 'transparent',
+                        color: ready ? C.green : C.midBlue }}>
+                      {ready ? '✓ Ready' : 'Mark ready'}
                     </button>
                     <button
-                      onClick={stagedIds.length ? () => setManyStatus(stagedIds, 'made') : undefined}
-                      disabled={stagedIds.length === 0}
+                      onClick={ready ? () => setManyStatus(ids, 'made') : undefined}
+                      disabled={!ready}
                       style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '9px 16px',
                         borderRadius: 999, border: 'none', background: C.green, color: C.card,
-                        cursor: stagedIds.length ? 'pointer' : 'not-allowed',
-                        opacity: stagedIds.length ? 1 : 0.4 }}>
-                      {stagedIds.length === 0
-                        ? 'Tick items to confirm'
-                        : allStaged
-                          ? 'Confirm order fulfilled'
-                          : `Confirm ${stagedIds.length} of ${pendingIds.length}`}
+                        cursor: ready ? 'pointer' : 'not-allowed', opacity: ready ? 1 : 0.4 }}>
+                      Confirm fulfilled
                     </button>
                   </>
                 )}
