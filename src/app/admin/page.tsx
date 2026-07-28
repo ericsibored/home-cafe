@@ -1,11 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
 import { C, SERIF, SANS } from '@/lib/theme'
 import { staffHeaders } from '@/lib/staff'
 import { PasswordGate } from '@/app/_components/PasswordGate'
+import { groupIntoTickets } from '@/lib/tickets'
 import type { EventOrder, MenuItemRow, BuilderOption } from '@/types'
 
 type AdminEvent = { id: string; name: string; date: string; is_active: boolean }
@@ -67,9 +68,13 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     return () => clearInterval(iv)
   }, [load])
 
-  const markMade = async (id: string) => {
-    setOrders(prev => prev.filter(o => o.id !== id))
-    await fetch('/api/event-orders', { method: 'PATCH', headers: staffHeaders, body: JSON.stringify({ id, status: 'made' }) })
+  const tickets = useMemo(() => groupIntoTickets(orders), [orders])
+
+  const markMade = async (ids: string[]) => {
+    setOrders(prev => prev.filter(o => !ids.includes(o.id)))
+    await Promise.all(ids.map(id => fetch('/api/event-orders', {
+      method: 'PATCH', headers: staffHeaders, body: JSON.stringify({ id, status: 'made' }),
+    })))
   }
   const toggleSoldOut = async (item: MenuItemRow) => {
     setMenuItems(prev => prev.map(m => m.id === item.id ? { ...m, sold_out: !m.sold_out } : m))
@@ -118,25 +123,32 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 30, marginTop: 28 }}>
             {/* Pending orders */}
             <section>
-              <h2 style={sectionTitle}>Pending orders ({orders.length})</h2>
+              <h2 style={sectionTitle}>Pending orders ({tickets.length})</h2>
               {orders.length === 0 ? (
                 <div style={{ ...card, textAlign: 'center', color: C.ink3, fontFamily: SANS, fontSize: 13 }}>
                   No pending orders — all caught up ☕
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {orders.map(o => (
-                    <div key={o.id} style={{ ...card, display: 'flex', alignItems: 'center',
+                  {tickets.map(t => (
+                    <div key={t.key} style={{ ...card, display: 'flex', alignItems: 'flex-start',
                       justifyContent: 'space-between', gap: 12 }}>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontFamily: SERIF, fontSize: 16, color: C.navy }}>{o.label}</div>
-                        <div style={{ fontFamily: SANS, fontSize: 12.5, color: C.midBlue, marginTop: 2 }}>
-                          {o.guest_name} · {timeAgo(o.created_at)}
+                        <div style={{ fontFamily: SERIF, fontSize: 16, color: C.navy }}>{t.guest}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+                          {t.items.map(o => (
+                            <div key={o.id} style={{ fontFamily: SANS, fontSize: 13.5, color: C.navy }}>
+                              {o.label}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ fontFamily: SANS, fontSize: 12.5, color: C.midBlue, marginTop: 4 }}>
+                          {t.items.length} item{t.items.length === 1 ? '' : 's'} · {timeAgo(t.createdAt)}
                         </div>
                       </div>
-                      <button onClick={() => markMade(o.id)} style={{ flexShrink: 0, fontFamily: SANS,
-                        fontSize: 13, fontWeight: 700, padding: '9px 16px', borderRadius: 999, border: 'none',
-                        background: C.green, color: C.card, cursor: 'pointer' }}>Mark made</button>
+                      <button onClick={() => markMade(t.items.map(o => o.id))} style={{ flexShrink: 0,
+                        fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '9px 16px', borderRadius: 999,
+                        border: 'none', background: C.green, color: C.card, cursor: 'pointer' }}>Mark made</button>
                     </div>
                   ))}
                 </div>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { C, SERIF, SANS } from '@/lib/theme'
 import { staffHeaders } from '@/lib/staff'
 import { PasswordGate } from '@/app/_components/PasswordGate'
+import { groupIntoTickets, ticketStatus } from '@/lib/tickets'
 import type { EventOrder, EventOrderStatus } from '@/types'
 
 function timeAgo(iso: string): string {
@@ -21,23 +22,6 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
 ]
 
-// Everything checked out together lands in one INSERT, so those rows share an
-// identical created_at — that plus the guest name identifies a ticket.
-type Ticket = { key: string; guest: string; createdAt: string; items: EventOrder[] }
-
-function groupIntoTickets(orders: EventOrder[]): Ticket[] {
-  const byKey = new Map<string, Ticket>()
-  for (const o of orders) {
-    const key = `${o.guest_name}|${o.created_at}`
-    const existing = byKey.get(key)
-    if (existing) existing.items.push(o)
-    else byKey.set(key, { key, guest: o.guest_name, createdAt: o.created_at, items: [o] })
-  }
-  return [...byKey.values()]
-}
-
-const ticketStatus = (t: Ticket): EventOrderStatus =>
-  t.items.every(i => i.status === 'made') ? 'made' : 'pending'
 
 // ── The live queue (polls the staff API) ────────────────────────────────────
 function Queue({ onSignOut }: { onSignOut: () => void }) {
