@@ -320,13 +320,13 @@ export default function WallPage() {
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '28px 18px 0' }}>
         {loading ? (
           <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink3, textAlign: 'center', padding: '32px 0' }}>Loading…</p>
-        ) : groups.every(g => g.photos.length === 0) ? (
+        ) : groups.length === 0 ? (
           <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink3, textAlign: 'center', padding: '32px 0' }}>
             No photos yet — be the first! 📸
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 34 }}>
-            {groups.filter(g => g.photos.length > 0).map(({ event, photos }) => (
+            {groups.map(({ event, photos }) => (
               <section key={event.id}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
                   <h2 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 21, color: C.navy }}>{event.name}</h2>
@@ -338,11 +338,21 @@ export default function WallPage() {
                   )}
                 </div>
                 <p style={{ fontFamily: SANS, fontSize: 12, color: C.midBlue, marginBottom: 14 }}>
-                  {formatEventDate(event.date)} · {photos.length} photo{photos.length === 1 ? '' : 's'}
+                  {formatEventDate(event.date)}
+                  {photos.length > 0 && ` · ${photos.length} photo${photos.length === 1 ? '' : 's'}`}
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
-                  {photos.map((entry, i) => <Polaroid key={entry.id} entry={entry} i={i} />)}
-                </div>
+                {photos.length === 0 ? (
+                  // A live event keeps its section from the start, so the wall
+                  // reads as open for photos rather than looking absent.
+                  <div style={{ border: `1.5px dashed ${C.rule}`, borderRadius: 16, padding: '28px 18px',
+                    textAlign: 'center', fontFamily: SANS, fontSize: 13, color: C.ink3 }}>
+                    No photos yet — be the first! 📸
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
+                    {photos.map((entry, i) => <Polaroid key={entry.id} entry={entry} i={i} />)}
+                  </div>
+                )}
               </section>
             ))}
           </div>
