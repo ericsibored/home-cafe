@@ -87,10 +87,20 @@ where e.slug = 'vol-3'
     where mi.event_id = e.id and mi.name = x.nm
   );
 
+-- 3. Rename the sorbet for Vol. 3 ---------------------------------------------
+--    Vol. 2 keeps the old name in its archive. The photo path is unchanged
+--    (/menu/watermelon-lychee-sorbet.webp) — the filename is internal.
+update public.menu_items mi
+set name = 'Watermelon Sorbet'
+from public.events e
+where mi.event_id = e.id
+  and e.slug = 'vol-3'
+  and mi.name = 'Watermelon Lychee Sorbet';
+
 commit;
 
 
--- 3. Verify -------------------------------------------------------------------
+-- 4. Verify -------------------------------------------------------------------
 select mi.category, mi.sort_order, mi.name,
        mi.details->>'price' as price,
        coalesce(mi.details->>'image', concat('emoji ', mi.details->>'emoji')) as art
