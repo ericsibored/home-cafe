@@ -3,11 +3,16 @@
 -- Run AFTER supabase-vol-3-seed.sql (which clones Vol. 2's menu into Vol. 3).
 -- Run in the Supabase SQL editor. Idempotent — safe to re-run.
 --
--- This applies the Vol. 3 lineup on top of the clone:
---   REMOVE  Banana Milk Thai Tea, Blueberry Matcha, Strawberry Matcha
+-- This applies the Vol. 3 lineup on top of the clone. The result is 4 drinks
+-- and 3 food items:
+--   KEEP    Hojicha Persimmon Latte, Passionfruit Matcha Latte,
+--           Watermelon Lychee Sorbet                      (already cloned)
 --   ADD     Pandan Coffee Latte, Black Sesame Matcha Latte,
 --           Ube Mango Cheesecake, Black Sesame Banana Bread
---   KEEP    Hojicha Persimmon Latte, Passionfruit Matcha Latte (already cloned)
+--   REMOVE  Banana Milk Thai Tea, Blueberry Matcha, Strawberry Matcha,
+--           Blueberry Coffee Latte (Pandan replaces it),
+--           Scallion Pancake Pastry Rolls, Cherry Almond Frangipane Tart,
+--           Strawberry Matcha Cheesecake Macarons
 --
 -- Only Vol. 3 rows are touched. Vol. 2 keeps its full menu as an archive, and
 -- past orders are unaffected (event_orders stores its own copy of each item).
@@ -15,15 +20,21 @@
 
 begin;
 
--- 1. Remove the three drinks that are not returning ---------------------------
+-- 1. Remove everything not returning for Vol. 3 -------------------------------
 delete from public.menu_items mi
 using public.events e
 where mi.event_id = e.id
   and e.slug = 'vol-3'
   and mi.name in (
+    -- drinks
     'Banana Milk Thai Tea',
     'Blueberry Matcha',
-    'Strawberry Matcha'
+    'Strawberry Matcha',
+    'Blueberry Coffee Latte',
+    -- food
+    'Scallion Pancake Pastry Rolls',
+    'Cherry Almond Frangipane Tart',
+    'Strawberry Matcha Cheesecake Macarons'
   );
 
 
