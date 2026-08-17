@@ -4,11 +4,12 @@
 -- Run in the Supabase SQL editor. Idempotent — safe to re-run.
 --
 -- This applies the Vol. 3 lineup on top of the clone. The result is 4 drinks
--- and 3 food items:
+-- and 4 food items (one of them savory):
 --   KEEP    Hojicha Persimmon Latte, Passionfruit Matcha Latte,
---           Watermelon Lychee Sorbet                      (already cloned)
+--           Watermelon Lychee Sorbet -> renamed in step 3   (already cloned)
 --   ADD     Pandan Coffee Latte, Black Sesame Matcha Latte,
---           Ube Mango Cheesecake, Black Sesame Banana Bread
+--           Ube Mango Cheesecake, Black Sesame Banana Bread,
+--           Miso Mushroom Hand Pies
 --   REMOVE  Banana Milk Thai Tea, Blueberry Matcha, Strawberry Matcha,
 --           Blueberry Coffee Latte (Pandan replaces it),
 --           Scallion Pancake Pastry Rolls, Cherry Almond Frangipane Tart,
@@ -79,6 +80,13 @@ cross join (values
     array['banana','black sesame','flour','butter','eggs']::text[],
     'Food', 4,
     '{"emoji":"🍌","price":4,"allergens":["gluten","dairy","eggs","sesame"]}'::jsonb
+  ),
+  (
+    'Miso Mushroom Hand Pies',
+    'Flaky puff pastry filled with miso-glazed mushrooms.',
+    array['mushroom','white miso','puff pastry','butter','shallot']::text[],
+    'Food', 5,
+    '{"emoji":"🥟","price":6,"allergens":["gluten","dairy","soy"]}'::jsonb
   )
 ) as x(nm, descr, ingr, cat, offset, details)
 where e.slug = 'vol-3'
