@@ -9,7 +9,7 @@
 --           Watermelon Lychee Sorbet -> renamed in step 3   (already cloned)
 --   ADD     Pandan Coffee Latte, Black Sesame Matcha Latte,
 --           Ube Mango Cheesecake, Black Sesame Banana Bread,
---           Miso Mushroom Hand Pies
+--           Mushroom Yuzu Kosho Egg Tarts
 --   REMOVE  Banana Milk Thai Tea, Blueberry Matcha, Strawberry Matcha,
 --           Blueberry Coffee Latte (Pandan replaces it),
 --           Scallion Pancake Pastry Rolls, Cherry Almond Frangipane Tart,
@@ -47,7 +47,7 @@ insert into public.menu_items
   (event_id, name, description, ingredients, sold_out, category, sort_order, details)
 select
   e.id, x.nm, x.descr, x.ingr, false, x.cat,
-  coalesce((select max(m.sort_order) from public.menu_items m where m.event_id = e.id), -1) + x.offset,
+  coalesce((select max(m.sort_order) from public.menu_items m where m.event_id = e.id), -1) + x.off,
   x.details
 from public.events e
 cross join (values
@@ -82,13 +82,13 @@ cross join (values
     '{"emoji":"🍌","price":4,"allergens":["gluten","dairy","eggs","sesame"]}'::jsonb
   ),
   (
-    'Miso Mushroom Hand Pies',
-    'Flaky puff pastry filled with miso-glazed mushrooms.',
-    array['mushroom','white miso','puff pastry','butter','shallot']::text[],
+    'Mushroom Yuzu Kosho Egg Tarts',
+    'Baby bella and shiitake with yuzu kosho, baked into egg tart shells.',
+    array['baby bella mushrooms','shiitake mushrooms','onion','yuzu kosho','scallions','egg tart shell']::text[],
     'Food', 5,
-    '{"emoji":"🥟","price":6,"allergens":["gluten","dairy","soy"]}'::jsonb
+    '{"emoji":"🥧","price":6,"allergens":["gluten","dairy","eggs"]}'::jsonb
   )
-) as x(nm, descr, ingr, cat, offset, details)
+) as x(nm, descr, ingr, cat, off, details)
 where e.slug = 'vol-3'
   and not exists (
     select 1 from public.menu_items mi
