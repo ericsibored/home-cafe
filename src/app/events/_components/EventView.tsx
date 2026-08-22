@@ -137,8 +137,8 @@ function SpecialtyCard({ item, orderable, onOrder }: {
         </div>
         {item.ingredients && item.ingredients.length > 0 && (
           <div style={{ paddingTop: 8, borderTop: `1px solid ${C.ruleSoft}`,
-            display: 'flex', gap: 6, fontFamily: SANS, fontSize: 11, color: C.ink2, lineHeight: 1.3 }}>
-            <span>🌿</span><span>{item.ingredients.join(', ')}</span>
+            fontFamily: SANS, fontSize: 11, color: C.ink2, lineHeight: 1.3 }}>
+            {item.ingredients.join(', ')}
           </div>
         )}
         {orderable && !soldOut && (
@@ -255,13 +255,11 @@ function BuildYourOwn({ options, orderable, onOrder }: {
   const bases = byCat('base')
   const milks = byCat('milk')
   const syrups = byCat('syrup')
-  const creams = byCat('cream')
   const modifiers = byCat('modifier')
 
   const [base, setBase] = useState<string | null>(null)
   const [milk, setMilk] = useState<string | null>(null)
   const [syrup, setSyrup] = useState<string | null>(null)
-  const [cream, setCream] = useState<string | null>(null)
   const [modifier, setModifier] = useState<string | null>(null)
   const [qty, setQty] = useState(0)
 
@@ -292,7 +290,6 @@ function BuildYourOwn({ options, orderable, onOrder }: {
     { label: 'Base', hint: 'choose one', opts: bases, sel: base, set: setBase, optional: false },
     { label: 'Milk', hint: 'choose one', opts: milks, sel: milk, set: setMilk, optional: false },
     { label: 'Syrup', hint: 'optional', opts: syrups, sel: syrup, set: setSyrup, optional: true },
-    { label: 'Cream top', hint: 'optional', opts: creams, sel: cream, set: setCream, optional: true },
     { label: 'Modifier', hint: 'optional', opts: modifiers, sel: modifier, set: setModifier, optional: true },
   ].filter(s => s.opts.length > 0)
 
@@ -301,7 +298,7 @@ function BuildYourOwn({ options, orderable, onOrder }: {
   // Ordering also needs a quantity of at least one.
   const canOrder = complete && qty > 0
 
-  const parts = [base, milk, syrup, cream, modifier].filter(Boolean)
+  const parts = [base, milk, syrup, modifier].filter(Boolean)
 
   return (
     <section>
@@ -346,7 +343,7 @@ function BuildYourOwn({ options, orderable, onOrder }: {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               <QtyStepper qty={qty} onChange={setQty} min={0} />
               <button
-                onClick={canOrder ? () => onOrder({ base: base!, milk, syrup, cream, modifier, quantity: qty }) : undefined}
+                onClick={canOrder ? () => onOrder({ base: base!, milk, syrup, cream: null, modifier, quantity: qty }) : undefined}
                 disabled={!canOrder}
                 style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '10px 18px',
                   borderRadius: 999, background: C.navy, color: C.peach, border: 'none', flexShrink: 0,
