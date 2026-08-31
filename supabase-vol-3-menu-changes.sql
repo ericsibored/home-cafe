@@ -6,7 +6,7 @@
 -- This applies the Vol. 3 lineup on top of the clone. The result is 4 drinks
 -- and 4 food items (one of them savory):
 --   KEEP    Hojicha Persimmon Latte, Passionfruit Matcha Latte,
---           Watermelon Lychee Sorbet -> renamed in step 3   (already cloned)
+--           Watermelon Lychee Sorbet -> Dual Watermelon Granita (step 3)
 --   ADD     Pandan Coffee Latte, Black Sesame Matcha Latte,
 --           Ube Mango Cheesecake, Black Sesame Banana Bread,
 --           Hong Kong Egg Tart
@@ -42,7 +42,7 @@ where mi.event_id = e.id
 -- 2. Add the four new items ---------------------------------------------------
 --    Descriptions, prices and allergens are best guesses — edit before running
 --    if you have the real ones. No photos yet, so each shows its emoji tile;
---    add "image" to details later the same way the Vol. 2 photos were wired.
+--    Photos are wired in below; all six files live in public/menu/.
 insert into public.menu_items
   (event_id, name, description, ingredients, sold_out, category, sort_order, details)
 select
@@ -56,7 +56,7 @@ cross join (values
     'Espresso over pandan-infused milk.',
     array['espresso','milk','pandan']::text[],
     'Drinks', 1,
-    '{"emoji":"🌿","price":7.5,"tempOptions":["iced"],"allergens":["dairy"],
+    '{"emoji":"🌿","price":7.5,"image":"/menu/pandan-coffee-latte.webp","imageFit":"cover","tempOptions":["iced"],"allergens":["dairy"],
       "addOns":["Whipped Cream","Coconut Whipped Cream"]}'::jsonb
   ),
   (
@@ -64,7 +64,7 @@ cross join (values
     'Ceremonial matcha over nutty black sesame.',
     array['ceremonial matcha','milk','black sesame']::text[],
     'Drinks', 2,
-    '{"emoji":"🍵","price":7.5,"tempOptions":["iced"],"allergens":["dairy","sesame"],
+    '{"emoji":"🍵","price":7.5,"image":"/menu/black-sesame-matcha-latte.webp","imageFit":"cover","tempOptions":["iced"],"allergens":["dairy","sesame"],
       "addOns":["Whipped Cream","Coconut Whipped Cream"]}'::jsonb
   ),
   (
@@ -72,14 +72,14 @@ cross join (values
     'Ube cheesecake layered with ripe mango.',
     array['ube','mango','cream cheese','butter']::text[],
     'Food', 3,
-    '{"emoji":"💜","price":6,"allergens":["gluten","dairy","eggs"]}'::jsonb
+    '{"emoji":"💜","price":6,"image":"/menu/ube-mango-cheesecake.webp","imageFit":"cover","allergens":["gluten","dairy","eggs"]}'::jsonb
   ),
   (
     'Black Sesame Banana Bread',
     'Banana bread swirled with black sesame paste.',
     array['banana','black sesame','flour','butter','eggs']::text[],
     'Food', 4,
-    '{"emoji":"🍌","price":4,"allergens":["gluten","dairy","eggs","sesame"]}'::jsonb
+    '{"emoji":"🍌","price":4,"image":"/menu/black-sesame-banana-bread.webp","imageFit":"cover","allergens":["gluten","dairy","eggs","sesame"]}'::jsonb
   ),
   (
     'Hong Kong Egg Tart',
@@ -95,15 +95,16 @@ where e.slug = 'vol-3'
     where mi.event_id = e.id and mi.name = x.nm
   );
 
--- 3. Rename the sorbet for Vol. 3 ---------------------------------------------
---    Vol. 2 keeps the old name in its archive. The photo path is unchanged
---    (/menu/watermelon-lychee-sorbet.webp) — the filename is internal.
+-- 3. Rename the sorbet and give it its own photo ------------------------------
+--    Red + yellow watermelon, so it is a granita rather than the Vol. 2 sorbet.
+--    Vol. 2 keeps the old name and photo in its archive.
 update public.menu_items mi
-set name = 'Watermelon Sorbet'
+set name = 'Dual Watermelon Granita',
+    details = details || '{"image":"/menu/dual-watermelon-granita.webp","imageFit":"cover"}'::jsonb
 from public.events e
 where mi.event_id = e.id
   and e.slug = 'vol-3'
-  and mi.name = 'Watermelon Lychee Sorbet';
+  and mi.name in ('Watermelon Lychee Sorbet', 'Watermelon Sorbet');
 
 commit;
 
