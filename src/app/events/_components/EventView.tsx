@@ -359,6 +359,74 @@ function BuildYourOwn({ options, orderable, onOrder }: {
   )
 }
 
+// ── BurntToast's Banana Bread (Vol. 4 one-off: buy direct via Venmo, no cart) ─
+const BANANA_BREAD_PRICE = 25.0
+const BANANA_BREAD_VENMO_HANDLE = 'rminjic85'
+
+function BananaBreadDrop({ orderable }: { orderable: boolean }) {
+  const [qty, setQty] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => { setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) }, [])
+
+  const subtotal = qty * BANANA_BREAD_PRICE
+  const note = `Cafe v4 Banana Bread Loaf x ${qty}`
+  const canOrder = orderable && qty > 0
+  const buttonHref = !canOrder ? undefined
+    : isMobile ? venmoPayDeepLink(BANANA_BREAD_VENMO_HANDLE, subtotal, note)
+    : venmoProfileUrl(BANANA_BREAD_VENMO_HANDLE)
+  const anchorProps = isMobile ? {} : { target: '_blank', rel: 'noopener noreferrer' }
+
+  return (
+    <section>
+      <h2 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22, color: C.navy, marginBottom: 4 }}>
+        BurntToast&apos;s Banana Bread
+      </h2>
+      <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, marginBottom: 16 }}>
+        A guest bake, sold separately from the regular menu — pay directly on Venmo.
+      </p>
+      <div style={{ background: C.card, borderRadius: 18, padding: 18,
+        boxShadow: '0 2px 12px rgba(30,58,95,0.09)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div>
+          <div style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.navy }}>
+            BurntToast&apos;s Banana Bread
+          </div>
+          <div style={{ fontFamily: SANS, fontSize: 12, color: C.ink2, marginTop: 3, lineHeight: 1.35 }}>
+            Details coming soon — placeholder listing while the recipe is finalized.
+          </div>
+          <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14, color: C.blueDeep, marginTop: 8 }}>
+            ${BANANA_BREAD_PRICE.toFixed(2)} / loaf
+          </div>
+        </div>
+        <div style={{ paddingTop: 14, borderTop: `1px solid ${C.rule}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
+              color: C.midBlue, marginBottom: 4 }}>Loaves</div>
+            <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14, color: C.navy }}>
+              {qty > 0 ? `Subtotal $${subtotal.toFixed(2)}` : 'Choose a quantity'}
+            </div>
+          </div>
+          {orderable && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <QtyStepper qty={qty} onChange={setQty} min={0} />
+              <a href={buttonHref} {...(canOrder ? anchorProps : {})}
+                aria-disabled={!canOrder}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  fontFamily: SANS, fontSize: 13, fontWeight: 700, padding: '10px 18px',
+                  borderRadius: 999, background: canOrder ? C.venmo : C.rule,
+                  color: canOrder ? '#ffffff' : C.ink3, textDecoration: 'none', flexShrink: 0,
+                  pointerEvents: canOrder ? 'auto' : 'none',
+                  boxShadow: canOrder ? '0 2px 8px rgba(61,149,206,0.35)' : 'none' }}>
+                Pay on venmo
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // ── Item modal (configure, then add to the cart) ─────────────────────────────
 function ItemModal({ draft, onClose, onAdd }: {
   draft: OrderDraft
@@ -893,6 +961,7 @@ export function EventView({
           </p>
         )}
         {hasBuilder && <BuildYourOwn options={builderOptions} orderable={orderable} onOrder={orderBuilder} />}
+        {event.slug === 'vol-4' && <BananaBreadDrop orderable={orderable} />}
       </div>
 
       {/* Footer — subtle tip link + photo wall */}
