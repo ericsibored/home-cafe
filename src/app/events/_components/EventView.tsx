@@ -464,7 +464,8 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
             BurntToast&apos;s Banana Bread
           </div>
           <div style={{ fontFamily: SANS, fontSize: 12, color: C.ink2, marginTop: 3, lineHeight: 1.35 }}>
-            Details coming soon — placeholder listing while the recipe is finalized.
+            Sticky toffee pudding meets banana bread, made with imported French butter
+            and vanilla.
           </div>
           <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14, color: C.blueDeep, marginTop: 8 }}>
             ${BANANA_BREAD_PRICE.toFixed(2)} / loaf
