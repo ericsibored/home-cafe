@@ -419,7 +419,7 @@ function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoaf
               fontFamily: SANS, fontSize: 13.5, color: C.navy }}>
             🍞 Taking home a loaf?
             <br />
-            <span style={{ fontWeight: 700 }}>Jump to BurntToast&apos;s Banana Bread →</span>
+            <span style={{ fontWeight: 700 }}>Jump to BurntToast&apos;s Banana Bread ↓</span>
           </button>
         )}
 
