@@ -453,6 +453,12 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
       </p>
       <div style={{ background: C.card, borderRadius: 18, padding: 18,
         boxShadow: '0 2px 12px rgba(30,58,95,0.09)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', borderRadius: 12,
+          background: C.surface }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/menu/banana-bread.webp" alt="BurntToast's Banana Bread loaf, sliced"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        </div>
         <div>
           <div style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.navy }}>
             BurntToast&apos;s Banana Bread
