@@ -81,7 +81,7 @@ cross join (values
     -- The $4 slice item. BurntToast's $25 loaf is a separate, hard-coded
     -- listing in EventView.tsx with its own Venmo flow and no row here.
     'Banana Bread',
-    'A guest bake from BurntToast.',
+    'Sticky toffee pudding meets banana bread, made with imported French butter and vanilla.',
     array['banana','flour','butter','eggs']::text[],
     'Food', 7,
     '{"emoji":"🍌","price":4.00,"allergens":["gluten","dairy","eggs"]}'::jsonb
