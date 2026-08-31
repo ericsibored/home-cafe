@@ -359,6 +359,73 @@ function BuildYourOwn({ options, orderable, onOrder }: {
   )
 }
 
+// ── Welcome popup ───────────────────────────────────────────────────────────
+const BANANA_BREAD_ANCHOR = 'burnttoast'
+const WELCOME_SEEN_KEY = 'lazy-orchard-welcome-seen'
+
+function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoafLink: boolean }) {
+  // Close first so the modal is gone before the page scrolls underneath it.
+  const jumpToLoaf = () => {
+    onClose()
+    setTimeout(() => {
+      document.getElementById(BANANA_BREAD_ANCHOR)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
+  }
+
+  return (
+    <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Welcome"
+      style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(30,58,95,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+      <div onClick={e => e.stopPropagation()}
+        style={{ background: C.card, width: '100%', maxWidth: 400, maxHeight: '85vh',
+          overflowY: 'auto', borderRadius: 24, padding: '24px 22px 26px', position: 'relative',
+          boxShadow: '0 12px 40px rgba(30,58,95,0.28)' }}>
+        <button onClick={onClose} aria-label="Close"
+          style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: 999,
+            border: 'none', background: C.pale, color: C.midBlue, fontSize: 15, cursor: 'pointer',
+            lineHeight: 1 }}>
+          ✕
+        </button>
+
+        <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy,
+          paddingRight: 34, lineHeight: 1.2 }}>
+          Welcome in ☕
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+          <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink2, lineHeight: 1.5, margin: 0 }}>
+            <strong style={{ color: C.navy }}>Order whatever you want</strong> — as much as you like.
+            Prices are shown on the menu, but everything is discounted at checkout.
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink2, lineHeight: 1.5, margin: 0 }}>
+            Your <strong style={{ color: C.navy }}>Venmo admission covers our ingredient costs</strong>,
+            so there is nothing more to pay. Enjoy!
+          </p>
+        </div>
+
+        {showLoafLink && (
+          <button onClick={jumpToLoaf}
+            style={{ marginTop: 16, width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+              borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+              border: `1.5px solid ${C.rule}`, background: C.surface,
+              fontFamily: SANS, fontSize: 13.5, color: C.navy }}>
+            🍞 Taking home a loaf? <span style={{ fontWeight: 700 }}>
+              Jump to BurntToast&apos;s Banana Bread →</span>
+          </button>
+        )}
+
+        <button onClick={onClose}
+          style={{ marginTop: 16, width: '100%', padding: '13px 0', borderRadius: 999, border: 'none',
+            background: C.navy, color: C.peach, fontFamily: SANS, fontSize: 15, fontWeight: 700,
+            cursor: 'pointer' }}>
+          Got it — let&apos;s order
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── BurntToast's Banana Bread (Vol. 4 one-off: buy direct via Venmo, no cart) ─
 const BANANA_BREAD_PRICE = 25.0
 const BANANA_BREAD_VENMO_HANDLE = 'rminjic85'
@@ -377,7 +444,7 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
   const anchorProps = isMobile ? {} : { target: '_blank', rel: 'noopener noreferrer' }
 
   return (
-    <section>
+    <section id={BANANA_BREAD_ANCHOR} style={{ scrollMarginTop: 16 }}>
       <h2 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22, color: C.navy, marginBottom: 4 }}>
         BurntToast&apos;s Banana Bread
       </h2>
@@ -798,6 +865,23 @@ export function EventView({
   const [placeError, setPlaceError] = useState('')
   const [placed, setPlaced] = useState<{ lines: CartLine[]; guest: string } | null>(null)
 
+  // Welcome popup: shown once per browser session, and only while ordering is
+  // open. Deferred to an effect so the server and first client render match.
+  const [welcomeOpen, setWelcomeOpen] = useState(false)
+  useEffect(() => {
+    if (!event.is_active) return
+    let seen = false
+    try { seen = !!sessionStorage.getItem(WELCOME_SEEN_KEY) } catch {}
+    if (seen) return
+    // One frame late, so the menu paints behind the popup rather than after it.
+    const id = requestAnimationFrame(() => setWelcomeOpen(true))
+    return () => cancelAnimationFrame(id)
+  }, [event.is_active])
+  const closeWelcome = useCallback(() => {
+    setWelcomeOpen(false)
+    try { sessionStorage.setItem(WELCOME_SEEN_KEY, '1') } catch {}
+  }, [])
+
   const refetch = useCallback(async () => {
     const supa = getSupabase()
     const [mi, bo] = await Promise.all([
@@ -979,6 +1063,10 @@ export function EventView({
           Lazy Orchard Café
         </div>
       </footer>
+
+      {welcomeOpen && (
+        <WelcomeModal onClose={closeWelcome} showLoafLink={event.slug === 'vol-4'} />
+      )}
 
       {orderable && cart.length > 0 && (
         <CartBar lines={cart} onReview={() => { setPlaceError(''); setCheckingOut(true) }} />
