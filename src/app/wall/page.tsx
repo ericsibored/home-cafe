@@ -37,8 +37,18 @@ function fileToScaledDataUrl(file: File, max = 1200, quality = 0.85): Promise<st
   })
 }
 
-// In-page camera with a front/back flip control. Falls back to the native
-// capture input (handled by the caller) when getUserMedia is unavailable.
+// In-page camera. Falls back to the native capture input (handled by the
+// caller) when getUserMedia is unavailable.
+//
+// Cameras are chosen by deviceId rather than facingMode. Windows browsers
+// (Surface Pro especially) frequently report no facingMode at all, so an
+// `ideal: 'user'` constraint can land on the infrared Windows Hello camera,
+// which streams a black or washed-out picture. We enumerate instead, skip IR
+// devices, and let the flip button cycle real cameras.
+type Cam = { deviceId: string; label: string }
+
+const isInfrared = (label: string) => /\b(ir|infrared)\b/i.test(label)
+
 function CameraModal({ onCapture, onClose, onUnavailable }: {
   onCapture: (dataUrl: string) => void
   onClose: () => void
@@ -46,30 +56,76 @@ function CameraModal({ onCapture, onClose, onUnavailable }: {
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const [facing, setFacing] = useState<'user' | 'environment'>('user')
+  const camsRef = useRef<Cam[]>([])
+  const startedRef = useRef(false)
+  const [camIndex, setCamIndex] = useState(0)
+  const [camCount, setCamCount] = useState(0)
+  const [mirrored, setMirrored] = useState(true)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     if (!navigator.mediaDevices?.getUserMedia) { onUnavailable(); return }
-    navigator.mediaDevices.getUserMedia({
-      video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 1280 } },
-      audio: false,
-    }).then(stream => {
+
+    const target = camsRef.current[camIndex]
+    const video: MediaTrackConstraints = target
+      ? { deviceId: { exact: target.deviceId } }
+      : { facingMode: { ideal: 'user' } }
+    video.width = { ideal: 1280 }
+    video.height = { ideal: 1280 }
+
+    navigator.mediaDevices.getUserMedia({ video, audio: false }).then(async stream => {
       if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
       streamRef.current = stream
+      startedRef.current = true
+
+      const track = stream.getVideoTracks()[0]
+      // facingMode is often undefined on desktop; a plain webcam should still
+      // be mirrored, so only un-mirror when we are told it faces outward.
+      setMirrored(track?.getSettings().facingMode !== 'environment')
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         videoRef.current.play().catch(() => {})
       }
       setReady(true)
-    }).catch(() => { if (!cancelled) onUnavailable() })
+
+      // Labels are only populated once permission has been granted, so this
+      // has to happen after the first successful stream.
+      if (camsRef.current.length === 0) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices()
+          if (cancelled) return
+          const cams = devices
+            .filter(d => d.kind === 'videoinput')
+            .map(d => ({ deviceId: d.deviceId, label: d.label }))
+            .filter(c => !isInfrared(c.label))
+          camsRef.current = cams
+          setCamCount(cams.length)
+
+          // If the browser handed us an IR camera, move to a real one.
+          const current = track?.label ?? ''
+          if (isInfrared(current) && cams.length > 0) { setCamIndex(0); return }
+
+          const i = cams.findIndex(c => c.deviceId === track?.getSettings().deviceId)
+          if (i > 0) setCamIndex(i)
+        } catch {}
+      }
+    }).catch(() => {
+      if (cancelled) return
+      // First attempt failing means no camera access at all — hand off to the
+      // native file input. Later failures are a flip that didn't take, so keep
+      // the camera open on the device that was already working.
+      if (!startedRef.current) { onUnavailable(); return }
+      setCamIndex(i => (camsRef.current.length ? (i + 1) % camsRef.current.length : i))
+    })
+
     return () => {
       cancelled = true
       streamRef.current?.getTracks().forEach(t => t.stop())
       streamRef.current = null
     }
-  }, [facing, onUnavailable])
+  }, [camIndex, onUnavailable])
 
   const snap = () => {
     const video = videoRef.current
@@ -82,8 +138,8 @@ function CameraModal({ onCapture, onClose, onUnavailable }: {
     canvas.width = w; canvas.height = h
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    // Mirror selfies so the saved photo matches the mirrored preview.
-    if (facing === 'user') { ctx.translate(w, 0); ctx.scale(-1, 1) }
+    // Match the mirrored preview so the saved photo looks like what you saw.
+    if (mirrored) { ctx.translate(w, 0); ctx.scale(-1, 1) }
     ctx.drawImage(video, 0, 0, w, h)
     onCapture(canvas.toDataURL('image/jpeg', 0.85))
   }
@@ -98,7 +154,7 @@ function CameraModal({ onCapture, onClose, onUnavailable }: {
       <div style={{ width: '100%', maxWidth: 420 }}>
         <video ref={videoRef} playsInline muted autoPlay
           style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', borderRadius: 20, background: '#000',
-            transform: facing === 'user' ? 'scaleX(-1)' : 'none', display: 'block' }} />
+            transform: mirrored ? 'scaleX(-1)' : 'none', display: 'block' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
           <button onClick={onClose} aria-label="Close camera"
             style={{ ...roundBtn, width: 52, height: 52, fontSize: 18, background: 'rgba(255,255,255,0.15)', color: '#fff' }}>
@@ -107,14 +163,18 @@ function CameraModal({ onCapture, onClose, onUnavailable }: {
           <button onClick={snap} disabled={!ready} aria-label="Take photo"
             style={{ ...roundBtn, width: 72, height: 72, background: '#fff', opacity: ready ? 1 : 0.4,
               boxShadow: 'inset 0 0 0 4px rgba(15,25,40,0.9), inset 0 0 0 6px #fff' }} />
-          <button onClick={() => { setReady(false); setFacing(f => f === 'user' ? 'environment' : 'user') }}
-            aria-label="Switch camera"
-            style={{ ...roundBtn, width: 52, height: 52, fontSize: 20, background: 'rgba(255,255,255,0.15)', color: '#fff' }}>
-            🔄
-          </button>
+          {camCount > 1 ? (
+            <button onClick={() => { setReady(false); setCamIndex(i => (i + 1) % camCount) }}
+              aria-label="Switch camera"
+              style={{ ...roundBtn, width: 52, height: 52, fontSize: 20, background: 'rgba(255,255,255,0.15)', color: '#fff' }}>
+              🔄
+            </button>
+          ) : (
+            <span style={{ width: 52, height: 52 }} aria-hidden />
+          )}
         </div>
         <p style={{ fontFamily: SANS, fontSize: 12, color: 'rgba(255,255,255,0.65)', textAlign: 'center', marginTop: 10 }}>
-          {facing === 'user' ? 'Front camera' : 'Back camera'} · tap 🔄 to switch
+          {!ready ? 'Starting camera…' : camCount > 1 ? 'Tap 🔄 to switch camera' : 'Camera ready'}
         </p>
       </div>
     </div>
