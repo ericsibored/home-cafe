@@ -9,7 +9,7 @@
 --           Watermelon Lychee Sorbet -> renamed in step 3   (already cloned)
 --   ADD     Pandan Coffee Latte, Black Sesame Matcha Latte,
 --           Ube Mango Cheesecake, Black Sesame Banana Bread,
---           Mushroom Yuzu Kosho Egg Tarts
+--           Hong Kong Egg Tart
 --   REMOVE  Banana Milk Thai Tea, Blueberry Matcha, Strawberry Matcha,
 --           Blueberry Coffee Latte (Pandan replaces it),
 --           Scallion Pancake Pastry Rolls, Cherry Almond Frangipane Tart,
@@ -82,11 +82,11 @@ cross join (values
     '{"emoji":"🍌","price":4,"allergens":["gluten","dairy","eggs","sesame"]}'::jsonb
   ),
   (
-    'Mushroom Yuzu Kosho Egg Tarts',
+    'Hong Kong Egg Tart',
     'Baby bella and shiitake with yuzu kosho, baked into egg tart shells.',
     array['baby bella mushrooms','shiitake mushrooms','onion','yuzu kosho','scallions','egg tart shell']::text[],
     'Food', 5,
-    '{"emoji":"🥧","price":6,"allergens":["gluten","dairy","eggs"]}'::jsonb
+    '{"emoji":"🥧","price":6,"image":"/menu/hong-kong-egg-tarts.webp","imageFit":"cover","allergens":["gluten","dairy","eggs"]}'::jsonb
   )
 ) as x(nm, descr, ingr, cat, off, details)
 where e.slug = 'vol-3'
