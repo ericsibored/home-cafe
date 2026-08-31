@@ -79,7 +79,7 @@ cross join (values
     'Banana bread swirled with black sesame paste.',
     array['banana','black sesame','flour','butter','eggs']::text[],
     'Food', 4,
-    '{"emoji":"🍌","price":4,"image":"/menu/black-sesame-banana-bread.webp","imageFit":"cover","allergens":["gluten","dairy","eggs","sesame"]}'::jsonb
+    '{"emoji":"🍌","price":4,"image":"/menu/banana-bread-slice.webp","imageFit":"cover","allergens":["gluten","dairy","eggs","sesame"]}'::jsonb
   ),
   (
     'Hong Kong Egg Tart',
