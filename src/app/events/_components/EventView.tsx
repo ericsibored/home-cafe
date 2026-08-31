@@ -400,7 +400,14 @@ function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoaf
           </p>
           <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink2, lineHeight: 1.5, margin: 0 }}>
             Your <strong style={{ color: C.navy }}>Venmo admission covers our ingredient costs</strong>,
-            so there is nothing more to pay. Enjoy!
+            so there is nothing more to pay.
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: 14, color: C.ink2, lineHeight: 1.5, margin: 0 }}>
+            We hope you enjoy!
+            <br />
+            <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16, color: C.navy }}>
+              Eric &amp; Minji
+            </span>
           </p>
         </div>
 
