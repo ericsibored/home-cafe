@@ -363,7 +363,15 @@ function BuildYourOwn({ options, orderable, onOrder }: {
 const BANANA_BREAD_ANCHOR = 'burnttoast'
 const WELCOME_SEEN_KEY = 'lazy-orchard-welcome-seen'
 
-function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoafLink: boolean }) {
+// 'vol-4' -> 'v4'; anything unrecognised just drops the version.
+function cafeVersionLabel(slug: string): string {
+  const n = /vol-(\d+)/i.exec(slug)?.[1]
+  return n ? `Home Cafe v${n}` : 'Home Cafe'
+}
+
+function WelcomeModal({ onClose, showLoafLink, cafeLabel }: {
+  onClose: () => void; showLoafLink: boolean; cafeLabel: string
+}) {
   // Close first so the modal is gone before the page scrolls underneath it.
   const jumpToLoaf = () => {
     onClose()
@@ -390,7 +398,7 @@ function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoaf
 
         <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy,
           paddingRight: 34, lineHeight: 1.2 }}>
-          Welcome to Home Cafe v4 ☕
+          Welcome to {cafeLabel} ☕
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
@@ -419,9 +427,7 @@ function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoaf
               fontFamily: SANS, fontSize: 13.5, color: C.navy }}>
             🍞 Want to buy a loaf?
             <br />
-            <span style={{ fontWeight: 700 }}>
-              Minji&apos;s banana bread (@burnttoast.nyc) ↓
-            </span>
+            <span style={{ fontWeight: 700 }}>Click this bubble ↓</span>
           </button>
         )}
 
@@ -1082,7 +1088,8 @@ export function EventView({
       </footer>
 
       {welcomeOpen && (
-        <WelcomeModal onClose={closeWelcome} showLoafLink={event.slug === 'vol-4'} />
+        <WelcomeModal onClose={closeWelcome} showLoafLink={event.slug === 'vol-4'}
+          cafeLabel={cafeVersionLabel(event.slug)} />
       )}
 
       {orderable && cart.length > 0 && (
