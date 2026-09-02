@@ -390,7 +390,7 @@ function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoaf
 
         <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: C.navy,
           paddingRight: 34, lineHeight: 1.2 }}>
-          Welcome in ☕
+          Welcome to Home Cafe v4 ☕
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
