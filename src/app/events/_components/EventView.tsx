@@ -420,7 +420,7 @@ function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoaf
             🍞 Want to buy a loaf?
             <br />
             <span style={{ fontWeight: 700 }}>
-              Buy a loaf of Minji&apos;s bread (@burnttoast.nyc) ↓
+              Minji&apos;s banana bread (@burnttoast.nyc) ↓
             </span>
           </button>
         )}
