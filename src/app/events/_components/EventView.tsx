@@ -417,9 +417,11 @@ function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoaf
               borderRadius: 14, cursor: 'pointer', textAlign: 'left',
               border: `1.5px solid ${C.rule}`, background: C.surface,
               fontFamily: SANS, fontSize: 13.5, color: C.navy }}>
-            🍞 Taking home a loaf?
+            🍞 Want a whole loaf to take home?
             <br />
-            <span style={{ fontWeight: 700 }}>Jump to BurntToast&apos;s Banana Bread ↓</span>
+            <span style={{ fontWeight: 700 }}>
+              Buy Minji&apos;s banana bread — @burnttoast.nyc ↓
+            </span>
           </button>
         )}
 
