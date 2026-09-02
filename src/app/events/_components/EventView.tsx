@@ -417,10 +417,10 @@ function WelcomeModal({ onClose, showLoafLink }: { onClose: () => void; showLoaf
               borderRadius: 14, cursor: 'pointer', textAlign: 'left',
               border: `1.5px solid ${C.rule}`, background: C.surface,
               fontFamily: SANS, fontSize: 13.5, color: C.navy }}>
-            🍞 Want a whole loaf to take home?
+            🍞 Want to buy a loaf?
             <br />
             <span style={{ fontWeight: 700 }}>
-              Buy Minji&apos;s banana bread — @burnttoast.nyc ↓
+              Buy a loaf of Minji&apos;s bread (@burnttoast.nyc) ↓
             </span>
           </button>
         )}
@@ -456,10 +456,10 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
   return (
     <section id={BANANA_BREAD_ANCHOR} style={{ scrollMarginTop: 16 }}>
       <h2 style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22, color: C.navy, marginBottom: 4 }}>
-        BurntToast&apos;s Banana Bread
+        Minji&apos;s Banana Bread
       </h2>
       <p style={{ fontFamily: SANS, fontSize: 12.5, color: C.ink2, marginBottom: 16 }}>
-        A guest bake, sold separately from the regular menu — pay directly on Venmo.
+        @burnttoast.nyc — sold separately from the menu, pay directly on Venmo.
       </p>
       <div style={{ background: C.card, borderRadius: 18, padding: 18,
         boxShadow: '0 2px 12px rgba(30,58,95,0.09)', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -471,7 +471,7 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
         </div>
         <div>
           <div style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.navy }}>
-            BurntToast&apos;s Banana Bread
+            Minji&apos;s Banana Bread
           </div>
           <div style={{ fontFamily: SANS, fontSize: 12, color: C.ink2, marginTop: 3, lineHeight: 1.35 }}>
             Sticky toffee pudding meets banana bread, made with imported French butter
