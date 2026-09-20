@@ -472,7 +472,7 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
         <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', borderRadius: 12,
           background: C.surface }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/menu/banana-bread.webp" alt="BurntToast's Banana Bread loaf, sliced"
+          <img src="/menu/banana-loaf.webp" alt="Minji's banana bread loaf, boxed"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         </div>
         <div>
