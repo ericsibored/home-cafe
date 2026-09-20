@@ -40,7 +40,7 @@ cross join (values
     'Honeydew juice and jasmine milk tea, topped with salted cream cheese matcha foam and skewered melon.',
     array['honeydew','jasmine tea','milk','cream cheese','matcha']::text[],
     'Drinks', 1,
-    '{"emoji":"🍈","price":8.50,"addOns":[],"allergens":["dairy"],"tempOptions":["iced"]}'::jsonb
+    '{"emoji":"🍈","price":8.50,"image":"/menu/honeydew-matcha.webp","imageFit":"cover","addOns":[],"allergens":["dairy"],"tempOptions":["iced"]}'::jsonb
   ),
   (
     'Black Sesame Matcha Latte',
@@ -68,7 +68,7 @@ cross join (values
     'Flaky hand pies filled with slow-braised beef curry.',
     array['beef','curry','pastry']::text[],
     'Food', 6,
-    '{"emoji":"🥟","price":6.50,"allergens":["gluten","dairy"]}'::jsonb
+    '{"emoji":"🥟","price":6.50,"image":"/menu/curry-tart.webp","imageFit":"cover","allergens":["gluten","dairy"]}'::jsonb
   ),
   (
     -- The $4 slice item. BurntToast's $25 loaf is a separate, hard-coded
