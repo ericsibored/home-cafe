@@ -445,15 +445,19 @@ function WelcomeModal({ onClose, showLoafLink, cafeLabel }: {
 // ── BurntToast's Banana Bread (Vol. 4 one-off: buy direct via Venmo, no cart) ─
 const BANANA_BREAD_PRICE = 18.0
 const BANANA_BREAD_VENMO_HANDLE = 'rminjic85'
+const BANANA_BREAD_FLAVORS = ['Black Sesame Buttercream', 'Injeolmi Buttercream']
 
 function BananaBreadDrop({ orderable }: { orderable: boolean }) {
   const [qty, setQty] = useState(0)
+  const [flavor, setFlavor] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => { setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) }, [])
 
   const subtotal = qty * BANANA_BREAD_PRICE
-  const note = `Cafe v4 Banana Bread Loaf x ${qty}`
-  const canOrder = orderable && qty > 0
+  // The flavour rides along in the Venmo note, since that payment is the only
+  // record of this order — it never goes through the cart or event_orders.
+  const note = `Cafe v4 Banana Bread Loaf x ${qty}${flavor ? ` (${flavor})` : ''}`
+  const canOrder = orderable && qty > 0 && !!flavor
   const buttonHref = !canOrder ? undefined
     : isMobile ? venmoPayDeepLink(BANANA_BREAD_VENMO_HANDLE, subtotal, note)
     : venmoProfileUrl(BANANA_BREAD_VENMO_HANDLE)
@@ -471,9 +475,9 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
         boxShadow: '0 2px 12px rgba(30,58,95,0.09)', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', borderRadius: 12,
           background: C.surface }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {/* Portrait source in a 4:3 frame: bias the crop downward so the loaf
               sits centred rather than low with empty counter above it. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/menu/banana-loaf.webp" alt="Minji's banana bread loaf, boxed"
             style={{ width: '100%', height: '100%', objectFit: 'cover',
               objectPosition: 'center 70%', display: 'block' }} />
@@ -490,13 +494,28 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
             ${BANANA_BREAD_PRICE.toFixed(2)} / loaf
           </div>
         </div>
+        {orderable && (
+          <div style={{ paddingTop: 14, borderTop: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
+              color: C.midBlue, marginBottom: 8 }}>Buttercream · choose one</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {BANANA_BREAD_FLAVORS.map(f => (
+                <OptionChip key={f} name={f} available selected={flavor === f}
+                  onClick={() => setFlavor(flavor === f ? null : f)} />
+              ))}
+            </div>
+          </div>
+        )}
+
         <div style={{ paddingTop: 14, borderTop: `1px solid ${C.rule}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: SANS, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6,
               color: C.midBlue, marginBottom: 4 }}>Loaves</div>
             <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14, color: C.navy }}>
-              {qty > 0 ? `Subtotal $${subtotal.toFixed(2)}` : 'Choose a quantity'}
+              {qty === 0 ? 'Choose a quantity'
+                : !flavor ? 'Choose a buttercream'
+                : `Subtotal $${subtotal.toFixed(2)}`}
             </div>
           </div>
           {orderable && (
