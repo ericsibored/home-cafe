@@ -61,7 +61,7 @@ cross join (values
     'Soft milk bread sandwich with a creamy egg salad filling.',
     array['milk bread','egg','mayo']::text[],
     'Food', 5,
-    '{"emoji":"🥪","price":6.00,"allergens":["gluten","eggs","dairy"]}'::jsonb
+    '{"emoji":"🥪","price":6.00,"image":"/menu/tamago-egg-sando.webp","imageFit":"cover","allergens":["gluten","eggs","dairy"]}'::jsonb
   ),
   (
     'Beef Curry Tarts',
