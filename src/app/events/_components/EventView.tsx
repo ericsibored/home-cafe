@@ -443,7 +443,7 @@ function WelcomeModal({ onClose, showLoafLink, cafeLabel }: {
 }
 
 // ── BurntToast's Banana Bread (Vol. 4 one-off: buy direct via Venmo, no cart) ─
-const BANANA_BREAD_PRICE = 25.0
+const BANANA_BREAD_PRICE = 18.0
 const BANANA_BREAD_VENMO_HANDLE = 'rminjic85'
 
 function BananaBreadDrop({ orderable }: { orderable: boolean }) {
