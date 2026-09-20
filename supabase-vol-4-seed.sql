@@ -36,18 +36,11 @@ select e.id, x.nm, x.descr, x.ingr, false, x.cat, x.ord, x.details
 from public.events e
 cross join (values
   (
-    'King Jasmine Honeydew',
+    'Honeydeuce Matcha Latte',
     'Honeydew juice and jasmine milk tea, topped with salted cream cheese matcha foam and skewered melon.',
     array['honeydew','jasmine tea','milk','cream cheese','matcha']::text[],
     'Drinks', 1,
     '{"emoji":"🍈","price":8.50,"addOns":[],"allergens":["dairy"],"tempOptions":["iced"]}'::jsonb
-  ),
-  (
-    'Watermelon-Coconut',
-    'Watermelon juice over coconut milk.',
-    array['watermelon','coconut milk']::text[],
-    'Drinks', 2,
-    '{"emoji":"🍉","price":7.50,"addOns":[],"allergens":[],"tempOptions":["iced"]}'::jsonb
   ),
   (
     'Black Sesame Matcha Latte',
@@ -64,14 +57,14 @@ cross join (values
     '{"image":"/menu/passionfruit-matcha-latte.webp","price":7.5,"addOns":[],"imageFit":"cover","allergens":[],"tempOptions":["iced"]}'::jsonb
   ),
   (
-    'Tamago Sando',
+    'Tamago Egg Sando',
     'Soft milk bread sandwich with a creamy egg salad filling.',
     array['milk bread','egg','mayo']::text[],
     'Food', 5,
     '{"emoji":"🥪","price":6.00,"allergens":["gluten","eggs","dairy"]}'::jsonb
   ),
   (
-    'Beef Curry Hand Pies',
+    'Beef Curry Tarts',
     'Flaky hand pies filled with slow-braised beef curry.',
     array['beef','curry','pastry']::text[],
     'Food', 6,
