@@ -472,8 +472,11 @@ function BananaBreadDrop({ orderable }: { orderable: boolean }) {
         <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', borderRadius: 12,
           background: C.surface }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* Portrait source in a 4:3 frame: bias the crop downward so the loaf
+              sits centred rather than low with empty counter above it. */}
           <img src="/menu/banana-loaf.webp" alt="Minji's banana bread loaf, boxed"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            style={{ width: '100%', height: '100%', objectFit: 'cover',
+              objectPosition: 'center 70%', display: 'block' }} />
         </div>
         <div>
           <div style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.navy }}>
