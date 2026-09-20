@@ -100,10 +100,9 @@ select e.id, x.cat, x.nm, true, x.ord
 from public.events e
 cross join (values
   ('base',  'Matcha',                0),
-  -- No espresso at Vol. 4, so that base option is not offered.
+  ('base',  'Hojicha',               1),   -- replaces espresso for Vol. 4
   ('milk',  'Fairlife',              0),
   ('milk',  'Oat Milk',              1),
-  ('syrup', 'Pandan',                0),
   ('syrup', 'Passionfruit',          1),
   ('syrup', 'Black Sesame',          3),   -- 2 is unused live; kept as-is
   ('cream', 'Whipped cream',         0),
