@@ -71,12 +71,26 @@ function QtyStepper({ qty, onChange, min = 1, max = 9, size = 34 }: {
   )
 }
 
+// Corner flag on the image area for items we only have a few of.
+function LimitedBadge() {
+  return (
+    <span style={{ position: 'absolute', top: 10, right: 10, fontFamily: SANS, fontSize: 11,
+      fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: C.card,
+      background: C.blueDeep, borderRadius: 999, padding: '3px 10px',
+      boxShadow: '0 1px 6px rgba(30,58,95,0.3)' }}>
+      Limited
+    </span>
+  )
+}
+
 function SpecialtyCard({ item, orderable, onOrder }: {
   item: MenuItemRow; orderable: boolean; onOrder: (item: MenuItemRow, quantity: number) => void
 }) {
   const d = item.details ?? {}
   const [qty, setQty] = useState(0)
   const soldOut = item.sold_out
+  // Sold out wins: a sold-out item is not "limited", it is gone.
+  const limited = !soldOut && !!d.limitedStock
   const temp = tempLabel(d.tempOptions)
   return (
     <div style={{ background: C.card, borderRadius: 18, overflow: 'hidden',
@@ -99,12 +113,15 @@ function SpecialtyCard({ item, orderable, onOrder }: {
               Sold out
             </span>
           )}
+          {limited && <LimitedBadge />}
         </div>
       ) : (
         <div style={{ width: '100%', aspectRatio: '3/4', background: C.peach, display: 'flex',
           alignItems: 'center', justifyContent: 'center', fontSize: 60, flexShrink: 0,
+          position: 'relative',
           filter: soldOut ? 'grayscale(0.7)' : undefined }}>
           {d.emoji ?? '☕'}
+          {limited && <LimitedBadge />}
         </div>
       )}
       <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>

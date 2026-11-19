@@ -66,6 +66,8 @@ export interface MenuItemDetails {
   imagePosition?: string
   imageFit?: 'cover' | 'contain'
   imageTransform?: string
+  /** Shows a "Limited" badge on the card; purely informational. */
+  limitedStock?: boolean
 }
 
 // A row in menu_items — the hero "Specialties" for an event.
