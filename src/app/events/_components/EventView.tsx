@@ -431,7 +431,7 @@ function WelcomeModal({ onClose, showLoafLink, cafeLabel }: {
             We hope you enjoy!
             <br />
             <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16, color: C.navy }}>
-              Eric &amp; Minji
+              Eric &amp; Sam
             </span>
           </p>
         </div>
