@@ -1,5 +1,8 @@
 import { getSupabase } from '@/lib/supabase-server'
 
+/** Site-wide cap on new photo-wall entries per rolling hour. */
+const UPLOADS_PER_HOUR = 100
+
 export async function GET() {
   try {
     const { data, error } = await getSupabase()
@@ -26,6 +29,26 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabase()
+
+    // Rate limit: the wall is open to anyone who can reach the site, and this
+    // route uploads whatever base64 it is handed. Cap new entries site-wide so
+    // a bad actor (or a loop) cannot fill the storage bucket. Counted from the
+    // table rather than memory, so the cap holds across serverless instances.
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    const { count, error: countError } = await supabase
+      .from('collage_entries')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', since)
+
+    if (countError) {
+      return Response.json({ error: countError.message }, { status: 500 })
+    }
+    if ((count ?? 0) >= UPLOADS_PER_HOUR) {
+      return Response.json(
+        { error: 'The photo wall is busy right now — please try again in a little while.' },
+        { status: 429, headers: { 'Retry-After': '600' } },
+      )
+    }
 
     // Strip the data URL prefix and decode base64 → Buffer
     const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, '')
