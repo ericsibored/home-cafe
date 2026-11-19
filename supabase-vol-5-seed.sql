@@ -2,8 +2,6 @@
 -- Lazy Orchard Vol. 5 — seed
 -- Run in the Supabase SQL editor. Idempotent — safe to re-run.
 --
--- SET THE DATE in step 1 before running.
---
 -- Vol. 5 is seeded by CLONING Vol. 4's live menu + build-your-own matrix, then
 -- trimming and adding. Vol. 4 is left untouched as its own archive.
 --
@@ -12,7 +10,7 @@
 --             Black Sesame Matcha Latte, Banana Bread, Tamago Egg Sando,
 --             Hojicha Cherry Ice Cream
 --   NEW       Brown Sugar Chestnut Latte (limited stock)
---             Poached Pear Tart (placeholder — fill in before going live)
+--             Poached Pear Tart
 --
 -- Step 5 is commented out, so Vol. 4 stays live until you choose to switch.
 --
@@ -27,7 +25,7 @@ insert into public.events (slug, name, date, description, is_active)
 values (
   'vol-5',
   'Lazy Orchard Vol. 5',
-  '2026-12-12',            -- <-- SET THE REAL DATE
+  '2026-11-21',
   null,                    -- subtitle; null renders nothing
   false                    -- activated in step 5
 )
@@ -56,8 +54,8 @@ where mi.event_id = (select id from public.events where slug = 'vol-4')
 
 -- 3. New for Vol. 5 ------------------------------------------------------------
 --    The chestnut latte carries "limitedStock": true, which renders a LIMITED
---    badge in the corner of its image. The pear tart is a placeholder: edit its
---    description, ingredients, price and allergens before going live.
+--    badge in the corner of its image. Neither has a photo yet, so both fall
+--    back to their emoji tile.
 insert into public.menu_items
   (event_id, name, description, ingredients, sold_out, category, sort_order, details)
 select e.id, x.nm, x.descr, x.ingr, false, x.cat, x.ord, x.details
@@ -65,17 +63,18 @@ from public.events e
 cross join (values
   (
     'Brown Sugar Chestnut Latte',
-    'Roasted chestnut and brown sugar under steamed milk.',
-    array['chestnut','brown sugar','milk','espresso']::text[],
+    'Roasted chestnut and brown sugar under ceremonial matcha.',
+    array['ceremonial matcha','roasted chestnut','brown sugar','milk']::text[],
     'Drinks', 2,
     '{"emoji":"🌰","price":7.5,"addOns":[],"limitedStock":true,"allergens":["dairy"],"tempOptions":["iced"]}'::jsonb
   ),
   (
     'Poached Pear Tart',
-    'Placeholder — details to come.',
-    array['pear']::text[],
+    'Almond flour base with vanilla frangipane and poached Asian pears.',
+    array['almond flour','vanilla','frangipane','asian pear','butter','eggs']::text[],
     'Food', 4,
-    '{"emoji":"🍐","price":6.00,"allergens":["gluten","dairy","eggs"]}'::jsonb
+    -- Almond flour base, so no wheat: nuts rather than gluten.
+    '{"emoji":"🍐","price":6.00,"allergens":["nuts","dairy","eggs"]}'::jsonb
   )
 ) as x(nm, descr, ingr, cat, ord, details)
 where e.slug = 'vol-5'
