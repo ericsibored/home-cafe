@@ -7,8 +7,10 @@
 -- Vol. 5 is seeded by CLONING Vol. 4's live menu + build-your-own matrix, then
 -- trimming and adding. Vol. 4 is left untouched as its own archive.
 --
---   DROPPED   Banana Bread, Tamago Egg Sando, Hojicha Cherry Ice Cream
---   KEPT      Beef Curry Tarts (food), all Vol. 4 drinks
+--   KEPT      Passionfruit Matcha Latte (drink), Beef Curry Tarts (food)
+--   DROPPED   everything else from Vol. 4: Honeydeuce Matcha Latte,
+--             Black Sesame Matcha Latte, Banana Bread, Tamago Egg Sando,
+--             Hojicha Cherry Ice Cream
 --   NEW       Brown Sugar Chestnut Latte (limited stock)
 --             Poached Pear Tart (placeholder — fill in before going live)
 --
@@ -34,14 +36,19 @@ on conflict (slug) do update
       date        = excluded.date,
       description = excluded.description;
 
--- 2. Clone Vol. 4's menu, minus the items that are not returning ---------------
+-- 2. Carry over the two returning items from Vol. 4 ----------------------------
+--    An allow-list, not a deny-list: only these two come across, with their
+--    photos, prices and copy intact. Everything else from Vol. 4 is retired.
 insert into public.menu_items
   (event_id, name, description, ingredients, sold_out, category, sort_order, details)
-select v5.id, mi.name, mi.description, mi.ingredients, false, mi.category, mi.sort_order, mi.details
+select v5.id, mi.name, mi.description, mi.ingredients, false, mi.category, k.ord, mi.details
 from public.menu_items mi
 cross join (select id from public.events where slug = 'vol-5') as v5
+join (values
+  ('Passionfruit Matcha Latte', 1),
+  ('Beef Curry Tarts',          3)
+) as k(nm, ord) on k.nm = mi.name
 where mi.event_id = (select id from public.events where slug = 'vol-4')
-  and mi.name not in ('Banana Bread', 'Tamago Egg Sando', 'Hojicha Cherry Ice Cream')
   and not exists (
     select 1 from public.menu_items m2
     where m2.event_id = v5.id and m2.name = mi.name
@@ -53,26 +60,24 @@ where mi.event_id = (select id from public.events where slug = 'vol-4')
 --    description, ingredients, price and allergens before going live.
 insert into public.menu_items
   (event_id, name, description, ingredients, sold_out, category, sort_order, details)
-select e.id, x.nm, x.descr, x.ingr, false, x.cat,
-  coalesce((select max(m.sort_order) from public.menu_items m where m.event_id = e.id), 0) + x.off,
-  x.details
+select e.id, x.nm, x.descr, x.ingr, false, x.cat, x.ord, x.details
 from public.events e
 cross join (values
   (
     'Brown Sugar Chestnut Latte',
     'Roasted chestnut and brown sugar under steamed milk.',
     array['chestnut','brown sugar','milk','espresso']::text[],
-    'Drinks', 1,
+    'Drinks', 2,
     '{"emoji":"🌰","price":7.5,"addOns":[],"limitedStock":true,"allergens":["dairy"],"tempOptions":["iced"]}'::jsonb
   ),
   (
     'Poached Pear Tart',
     'Placeholder — details to come.',
     array['pear']::text[],
-    'Food', 2,
+    'Food', 4,
     '{"emoji":"🍐","price":6.00,"allergens":["gluten","dairy","eggs"]}'::jsonb
   )
-) as x(nm, descr, ingr, cat, off, details)
+) as x(nm, descr, ingr, cat, ord, details)
 where e.slug = 'vol-5'
   and not exists (
     select 1 from public.menu_items mi
