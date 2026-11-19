@@ -12,7 +12,7 @@
 --   NEW       Brown Sugar Chestnut Latte (limited stock)
 --             Poached Pear Tart
 --
--- Step 5 is commented out, so Vol. 4 stays live until you choose to switch.
+-- Step 5 ACTIVATES Vol. 5 and archives Vol. 4 to /events.
 --
 -- Note: BurntToast's loaf section is hard-coded to the vol-4 slug in
 -- EventView.tsx, so it disappears on Vol. 5 by itself — nothing to remove here.
@@ -97,10 +97,11 @@ where bo.event_id = (select id from public.events where slug = 'vol-4')
 commit;
 
 -- 5. Go live -------------------------------------------------------------------
---    Uncomment when the menu is final. Two statements, because
---    events_single_active is a partial unique index.
--- update public.events set is_active = false where is_active = true and slug <> 'vol-5';
--- update public.events set is_active = true  where slug = 'vol-5';
+--    Makes Vol. 5 the homepage event and moves Vol. 4 to /events as an archive.
+--    Two statements, because events_single_active is a partial unique index: the
+--    old active row must be cleared before the new one is set.
+update public.events set is_active = false where is_active = true and slug <> 'vol-5';
+update public.events set is_active = true  where slug = 'vol-5';
 
 -- 6. Check your work -----------------------------------------------------------
 select mi.category, mi.sort_order, mi.name, mi.details->>'price' as price,
