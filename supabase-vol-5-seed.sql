@@ -119,6 +119,8 @@ where e.slug = 'vol-5'
   );
 
 -- 4. Build-Your-Own — clone Vol. 4's matrix ------------------------------------
+--    Vol. 4 dropped espresso in favour of hojicha; Vol. 5 brings it back, so
+--    the bases end up Matcha / Hojicha / Espresso.
 insert into public.builder_options (event_id, category, name, available, sort_order)
 select v5.id, bo.category, bo.name, true, bo.sort_order
 from public.builder_options bo
@@ -127,6 +129,16 @@ where bo.event_id = (select id from public.events where slug = 'vol-4')
   and not exists (
     select 1 from public.builder_options b2
     where b2.event_id = v5.id and b2.category = bo.category and b2.name = bo.name
+  );
+
+-- Espresso returns as a base for Vol. 5 (the pandan latte is espresso-based).
+insert into public.builder_options (event_id, category, name, available, sort_order)
+select e.id, 'base', 'Espresso', true, 2
+from public.events e
+where e.slug = 'vol-5'
+  and not exists (
+    select 1 from public.builder_options bo
+    where bo.event_id = e.id and bo.category = 'base' and bo.name = 'Espresso'
   );
 
 commit;
@@ -146,3 +158,9 @@ from public.menu_items mi
 join public.events e on e.id = mi.event_id
 where e.slug = 'vol-5'
 order by mi.category, mi.sort_order;
+
+select bo.category, bo.sort_order, bo.name
+from public.builder_options bo
+join public.events e on e.id = bo.event_id
+where e.slug = 'vol-5'
+order by bo.category, bo.sort_order;
