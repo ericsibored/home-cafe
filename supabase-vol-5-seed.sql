@@ -10,7 +10,11 @@
 --             Black Sesame Matcha Latte, Banana Bread, Tamago Egg Sando,
 --             Hojicha Cherry Ice Cream
 --   NEW       Brown Sugar Chestnut Latte (limited stock)
+--             Strawberry Shortcake Matcha Latte  (reuses the Vol. 3 photo)
+--             Pandan Coffee Latte                (reuses the Vol. 3 photo)
 --             Poached Pear Tart
+--             Caramelized Shallot Quiche
+--             Pumpkin Pie (placeholder — name expected to change)
 --
 -- Step 5 ACTIVATES Vol. 5 and archives Vol. 4 to /events.
 --
@@ -75,6 +79,37 @@ cross join (values
     'Food', 4,
     -- Almond flour base, so no wheat: nuts rather than gluten.
     '{"emoji":"🍐","price":6.00,"allergens":["nuts","dairy","eggs"]}'::jsonb
+  ),
+  (
+    -- Reuses the Vol. 3 strawberry matcha photo.
+    'Strawberry Shortcake Matcha Latte',
+    'Ceremonial matcha over strawberry and sweet cream.',
+    array['ceremonial matcha','strawberry','milk','cream']::text[],
+    'Drinks', 5,
+    '{"emoji":"🍓","price":7.5,"addOns":[],"image":"/menu/strawberry-matcha.webp","imageFit":"cover","allergens":["dairy"],"tempOptions":["iced"]}'::jsonb
+  ),
+  (
+    -- Reuses the Vol. 3 pandan latte photo.
+    'Pandan Coffee Latte',
+    'Espresso over pandan-infused milk.',
+    array['espresso','milk','pandan']::text[],
+    'Drinks', 6,
+    '{"emoji":"🌿","price":7.5,"addOns":[],"image":"/menu/pandan-coffee-latte.webp","imageFit":"cover","allergens":["dairy"],"tempOptions":["hot","iced"]}'::jsonb
+  ),
+  (
+    'Caramelized Shallot Quiche',
+    'Slow-caramelized shallots in a savory custard tart.',
+    array['shallot','egg','cream','butter','pastry']::text[],
+    'Food', 7,
+    '{"emoji":"🥧","price":6.50,"allergens":["gluten","dairy","eggs"]}'::jsonb
+  ),
+  (
+    -- Placeholder: the name is expected to change before the event.
+    'Pumpkin Pie',
+    'Placeholder — name and details to come.',
+    array['pumpkin']::text[],
+    'Food', 8,
+    '{"emoji":"🎃","price":6.00,"allergens":["gluten","dairy","eggs"]}'::jsonb
   )
 ) as x(nm, descr, ingr, cat, ord, details)
 where e.slug = 'vol-5'
