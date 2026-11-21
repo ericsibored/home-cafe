@@ -140,6 +140,20 @@ where e.slug = 'vol-5'
     where bo.event_id = e.id and bo.category = 'base' and bo.name = 'Espresso'
   );
 
+-- Passionfruit syrup — ensure it is on the Vol. 5 syrup list even if it was not
+-- part of Vol. 4's matrix. sort_order lands after the existing syrups.
+insert into public.builder_options (event_id, category, name, available, sort_order)
+select e.id, 'syrup', 'Passionfruit Syrup', true,
+       coalesce((select max(bo2.sort_order) from public.builder_options bo2
+                 where bo2.event_id = e.id and bo2.category = 'syrup'), 0) + 1
+from public.events e
+where e.slug = 'vol-5'
+  and not exists (
+    select 1 from public.builder_options bo
+    where bo.event_id = e.id and bo.category = 'syrup'
+      and bo.name in ('Passionfruit Syrup', 'Passionfruit')
+  );
+
 commit;
 
 -- 5. Go live -------------------------------------------------------------------
