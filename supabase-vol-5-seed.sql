@@ -13,8 +13,8 @@
 --             Strawberry Shortcake Matcha Latte  (reuses the Vol. 3 photo)
 --             Pandan Coffee Latte                (reuses the Vol. 3 photo)
 --             Poached Pear Tart
---             Caramelized Shallot Quiche
---             Pumpkin Pie (placeholder — name expected to change)
+--             Caramelized Shallot, Sage & Gruyère Quiche
+--             Fall Pumpkin Swirl Cheesecake
 --
 -- Step 5 ACTIVATES Vol. 5 and archives Vol. 4 to /events.
 --
@@ -97,19 +97,18 @@ cross join (values
     '{"emoji":"🌿","price":7.5,"addOns":[],"image":"/menu/pandan-coffee-latte.webp","imageFit":"cover","allergens":["dairy"],"tempOptions":["hot","iced"]}'::jsonb
   ),
   (
-    'Caramelized Shallot Quiche',
-    'Slow-caramelized shallots in a savory custard tart.',
-    array['shallot','egg','cream','butter','pastry']::text[],
+    'Caramelized Shallot, Sage & Gruyère Quiche',
+    'Slow-caramelized shallots, sage and gruyère in a savory custard tart.',
+    array['shallot','sage','gruyère','egg','cream','butter','pastry']::text[],
     'Food', 7,
-    '{"emoji":"🥧","price":6.50,"allergens":["gluten","dairy","eggs"]}'::jsonb
+    '{"emoji":"🥧","price":6.50,"image":"/menu/shallot-gruyere-quiche.webp","imageFit":"cover","allergens":["gluten","dairy","eggs"]}'::jsonb
   ),
   (
-    -- Placeholder: the name is expected to change before the event.
-    'Pumpkin Pie',
-    'Placeholder — name and details to come.',
-    array['pumpkin']::text[],
+    'Fall Pumpkin Swirl Cheesecake',
+    'Pumpkin swirled through vanilla cheesecake on a graham crust.',
+    array['pumpkin','cream cheese','graham','butter','eggs']::text[],
     'Food', 8,
-    '{"emoji":"🎃","price":6.00,"allergens":["gluten","dairy","eggs"]}'::jsonb
+    '{"emoji":"🎃","price":6.00,"image":"/menu/pumpkin-swirl-cheesecake.webp","imageFit":"cover","allergens":["gluten","dairy","eggs"]}'::jsonb
   )
 ) as x(nm, descr, ingr, cat, ord, details)
 where e.slug = 'vol-5'
